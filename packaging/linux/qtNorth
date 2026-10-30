@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+qtnorth_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+export LD_LIBRARY_PATH="$qtnorth_root/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export QT_PLUGIN_PATH="$qtnorth_root/plugins"
+# Do not mix this Qt runtime with a different installation's platform plugins.
+unset QT_QPA_PLATFORM_PLUGIN_PATH
+if [[ -z "${QT_QPA_PLATFORM:-}" ]]; then
+    qtnorth_socket="${WAYLAND_DISPLAY:-}"
+    if [[ "$qtnorth_socket" != /* ]]; then
+        qtnorth_socket="${XDG_RUNTIME_DIR:-}/$qtnorth_socket"
+    fi
+    if [[ -n "${WAYLAND_DISPLAY:-}" && -S "$qtnorth_socket" && -f "$qtnorth_root/plugins/platforms/libqwayland-generic.so" ]]; then
+        export QT_QPA_PLATFORM=wayland
+    elif [[ -n "${DISPLAY:-}" ]]; then
+        export QT_QPA_PLATFORM=xcb
+    fi
+fi
+exec "$qtnorth_root/bin/qtNorth" "$@"

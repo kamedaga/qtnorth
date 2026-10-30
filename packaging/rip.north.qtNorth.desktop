@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=qtNorth
+Comment=Desktop client for north.rip
+Comment[ja]=north.ripのデスクトップクライアント
+Exec=qtNorth
+Icon=qtnorth
+Terminal=false
+Categories=Network;
+StartupWMClass=qtNorth

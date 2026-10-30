@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+qtnorth_root=$(CDPATH='' cd -P "$(dirname "$0")" && pwd)
+exec "$qtnorth_root/bin/qtNorth" "$@"

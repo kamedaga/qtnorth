@@ -1,0 +1,64 @@
+# Build trees and distribution packages
+/build*/
+/out/
+
+# Local CMake configuration and in-source build output
+/CMakeUserPresets.json
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+Testing/
+/Makefile
+/build.ninja
+/.ninja_*
+/compile_commands.json
+/qtNorth
+/qtNorth.exe
+
+# Local credentials and environment files (including nested directories)
+.env
+.env.*
+*.env
+*.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+id_rsa
+id_dsa
+id_ecdsa
+id_ecdsa_sk
+id_ed25519
+id_ed25519_sk
+*.keyring
+
+# QEMU disks and installation media
+*.qcow
+*.qcow2
+*.vmdk
+*.vdi
+*.vhd
+*.vhdx
+*.iso
+
+# Generated caches, logs, and crash dumps
+__pycache__/
+*.py[cod]
+.cache/
+*.log
+*.core
+*.dmp
+/core
+core.[0-9]*
+
+# Editor and desktop metadata
+*.user
+*.user.*
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini

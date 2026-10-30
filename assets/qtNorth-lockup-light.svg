@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 532 124" width="532" height="124" role="img" aria-label="qtNorth">
+  <title>qtNorth horizontal lockup — light ink</title>
+  <!-- Adapted from the user-provided north-lockup.svg. -->
+  <g fill="#f5f5f5">
+    <g transform="translate(56 56) scale(0.375)"><path d="M0 -126 C 0.5 -8 6 -0.7 84 0 C 6 0.7 0.5 8 0 126 C -0.5 8 -6 0.7 -84 0 C -6 -0.7 -0.5 -8 0 -126 Z"/></g>
+    <g transform="translate(98 22) scale(0.075)" opacity="0.75"><path d="M0 -126 C 0.5 -8 6 -0.7 84 0 C 6 0.7 0.5 8 0 126 C -0.5 8 -6 0.7 -84 0 C -6 -0.7 -0.5 -8 0 -126 Z"/></g>
+    <g transform="translate(20 94) scale(0.05)" opacity="0.5"><path d="M0 -126 C 0.5 -8 6 -0.7 84 0 C 6 0.7 0.5 8 0 126 C -0.5 8 -6 0.7 -84 0 C -6 -0.7 -0.5 -8 0 -126 Z"/></g>
+  </g>
+  <g fill="none" stroke="#f5f5f5" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="translate(128 0)">
+      <circle cx="17" cy="72" r="23"/>
+      <path d="M40 72 V106"/>
+      <path d="M78 20 V80 A12 12 0 0 0 96 92"/>
+      <path d="M62 50 H92"/>
+    </g>
+    <g transform="translate(256 0)">
+      <path d="M0 94 V24 L36 94 V24"/>
+      <circle cx="79" cy="72" r="23"/>
+      <path d="M120 94 V66 A16 16 0 0 1 144 58"/>
+      <path d="M182 20 V80 A12 12 0 0 0 200 92"/>
+      <path d="M166 50 H196"/>
+      <path d="M224 94 V16"/>
+      <path d="M224 66 A16 16 0 0 1 256 66 V94"/>
+    </g>
+  </g>
+</svg>

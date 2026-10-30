@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="qtNorth">
+  <title>qtNorth app icon</title>
+  <!-- Star paths adapted from the user-provided north-lockup.svg. -->
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="#111111"/>
+  <g fill="#ffffff">
+    <g transform="translate(61 65) scale(0.36)"><path d="M0 -126 C 0.5 -8 6 -0.7 84 0 C 6 0.7 0.5 8 0 126 C -0.5 8 -6 0.7 -84 0 C -6 -0.7 -0.5 -8 0 -126 Z"/></g>
+    <g transform="translate(100 32) scale(0.08)" opacity="0.75"><path d="M0 -126 C 0.5 -8 6 -0.7 84 0 C 6 0.7 0.5 8 0 126 C -0.5 8 -6 0.7 -84 0 C -6 -0.7 -0.5 -8 0 -126 Z"/></g>
+    <g transform="translate(28 99) scale(0.055)" opacity="0.5"><path d="M0 -126 C 0.5 -8 6 -0.7 84 0 C 6 0.7 0.5 8 0 126 C -0.5 8 -6 0.7 -84 0 C -6 -0.7 -0.5 -8 0 -126 Z"/></g>
+  </g>
+</svg>
