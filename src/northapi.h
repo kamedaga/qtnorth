@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <QUrlQuery>
 #include <functional>
+#include <memory>
 
 struct ApiResult {
     int status = 0;
@@ -51,6 +52,7 @@ public:
     void clearCaches();
     static QByteArray newIdempotencyKey();
     void fetchMedia(QObject *context, const QUrl &url, MediaCallback callback);
+    void uploadImage(QObject *context, QByteArray bytes, QByteArray mimeType, Callback callback);
     void votePoll(const QString &postId, const QString &optionId);
     void refreshPoll(const QString &postId);
     bool pollBusy(const QString &postId) const { return m_pollVotes.contains(postId); }
@@ -67,9 +69,10 @@ signals:
     void rateLimited(int seconds);
     void sessionChanged();
 private:
+    struct ImageUpload { QByteArray bytes, mimeType; };
     void send(QObject *context, const QByteArray &method, const QString &path,
               const QUrlQuery &query, const QJsonObject &body, Callback callback,
-              bool authenticated, const QByteArray &key = {});
+              bool authenticated, const QByteArray &key = {}, std::shared_ptr<const ImageUpload> upload = {});
     void pollDevice();
     bool acceptTokens(const QJsonObject &json);
     void refresh();

@@ -2,6 +2,7 @@
 #include "memorystore.h"
 #include "messagespage.h"
 #include "postcard.h"
+#include "postcomposer.h"
 #include "remoteimage.h"
 #include "profilepage.h"
 #include "theme.h"
@@ -143,9 +144,10 @@ private slots:
         QTest::mouseClick(authorize, Qt::LeftButton);
         QTRY_COMPARE(server.requests.size(), 1);
         QCOMPARE(server.requests.first().url.path(), "/oauth/device/code");
-        QCOMPARE(server.requests.first().body.value("client_id").toString(), "cmvv27dcd00dlgkrdx8q6vnxi");
+        QCOMPARE(server.requests.first().body.value("client_id").toString(), "cmvv3xndx00gogkrd5zc7iis3");
         QVERIFY(server.requests.first().body.value("scope").toString().contains("polls.vote"));
         QVERIFY(server.requests.first().body.value("scope").toString().contains("follows.write"));
+        QVERIFY(server.requests.first().body.value("scope").toString().contains("media.write"));
         QVERIFY(!server.requests.first().headers.contains("authorization"));
         QTRY_VERIFY(methods->isEnabled());
         QCOMPARE(window.findChild<QStackedWidget *>("appPages")->currentWidget()->objectName(), "loginPage");
@@ -166,7 +168,7 @@ private slots:
         QAction *compose = nullptr; for (auto *a : window.findChildren<QAction *>()) if (a->text() == "新規ポスト") compose = a;
         QVERIFY(compose); compose->trigger();
         auto *dialog = window.findChild<QDialog *>("composeDialog"); QVERIFY(dialog);
-        auto *editor = dialog->findChild<QPlainTextEdit *>("composeText"); auto *enabled = dialog->findChild<QCheckBox *>("composePoll");
+        auto *editor = dialog->findChild<ComposerEditor *>("composeText"); auto *enabled = dialog->findChild<QPushButton *>("composePoll");
         auto *first = dialog->findChild<QLineEdit *>("pollOption1Input"); auto *second = dialog->findChild<QLineEdit *>("pollOption2Input");
         auto *duration = dialog->findChild<QComboBox *>("pollDuration"); auto *send = dialog->findChild<QPushButton *>("composeSend");
         enabled->setChecked(true); first->setText("A"); second->setText("a"); editor->setPlainText("どちらが好き？"); QVERIFY(!send->isEnabled());
@@ -181,6 +183,40 @@ private slots:
         QTRY_COMPARE(posts.size(), 3);
         QVERIFY(posts[2].headers.value("idempotency-key") != posts[1].headers.value("idempotency-key"));
         QTRY_VERIFY(!window.findChild<QDialog *>("composeDialog"));
+    }
+    void timelineComposerPostsInlineAndKeepsDraftAcrossTabs() {
+        Server server; QList<Request> posts;
+        server.handler = [&](Request request) {
+            if (request.url.path() == "/2/users/me") return Response{200, {{"data", QJsonObject{{"id", "me"}, {"handle", "me"}, {"name", "Me"}}}}};
+            if (request.url.path() == "/2/notifications/unread_count") return Response{200, {{"data", QJsonObject{{"count", 0}}}}};
+            if (request.method == "POST") { posts.append(request); return posts.size() == 1 ? Response{500, {{"error", "temporary"}}, {}, 20} : Response{201, {{"data", QJsonObject{{"id", "new-post"}}}}}; }
+            auto item = post("existing"); item.remove("media");
+            return Response{200, {{"data", QJsonObject{{"items", QJsonArray{item}}}}}};
+        };
+        MemoryStore store; MainWindow window(nullptr, server.base(), &store); window.show();
+        QTRY_VERIFY(window.findChild<QTabWidget *>("loginMethods")->isEnabled()); submitToken(window);
+        auto *composer = window.findChild<PostComposer *>("inlineComposer"); QVERIFY(composer);
+        QTRY_VERIFY(composer->isVisible());
+        auto *timeline = window.findChild<QScrollArea *>("timelineScroll"); QVERIFY(timeline->widget()->isAncestorOf(composer));
+        for (const char *tool : {"composeAttach", "composeList", "composeEmoji", "composeBold", "composeItalic"}) QVERIFY(composer->findChild<QPushButton *>(tool));
+        composer->editor()->setPlainText("hello"); composer->editor()->selectAll();
+        QTest::mouseClick(composer->findChild<QPushButton *>("composeBold"), Qt::LeftButton);
+        QTest::mouseClick(composer->findChild<QPushButton *>("composeList"), Qt::LeftButton);
+        auto navigate = [&](const char *view) {
+            for (auto *button : window.findChildren<QPushButton *>("nav")) if (button->property("view") == view) { QTest::mouseClick(button, Qt::LeftButton); return; }
+            QFAIL("Navigation button missing");
+        };
+        navigate("ranked"); QTRY_VERIFY(composer->isVisible());
+        QCOMPARE(composer->editor()->northText(), QStringLiteral("• <太字>hello</太字>"));
+        navigate("search"); QTRY_VERIFY(!composer->isVisible());
+        navigate("home"); QTRY_VERIFY(composer->isVisible());
+        capture(window, "inline-composer");
+        auto *send = composer->findChild<QPushButton *>("composeSend"); QTest::mouseClick(send, Qt::LeftButton);
+        QTRY_VERIFY(posts.size() == 1 && !composer->busy()); QCOMPARE(composer->editor()->toPlainText(), "hello");
+        QVERIFY(!window.findChild<QDialog *>("composeDialog"));
+        QTest::mouseClick(send, Qt::LeftButton); QTRY_COMPARE(posts.size(), 2); QTRY_VERIFY(composer->editor()->toPlainText().isEmpty());
+        QCOMPARE(posts[0].body.value("text").toString(), QStringLiteral("• <太字>hello</太字>"));
+        QCOMPARE(posts[0].headers.value("idempotency-key"), posts[1].headers.value("idempotency-key"));
     }
     void disclaimerIsReadableBeforeLogin() {
         Server server; MemoryStore store;

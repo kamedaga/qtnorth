@@ -13,6 +13,7 @@ struct Request {
     QUrl url;
     QMap<QByteArray, QByteArray> headers;
     QJsonObject body;
+    QByteArray rawBody;
 };
 struct Response {
     int status = 200;
@@ -49,7 +50,8 @@ public:
                     }
                     const int length = req.headers.value("content-length").toInt();
                     if (buffer->size() < end + 4 + length) return;
-                    req.body = QJsonDocument::fromJson(buffer->mid(end + 4, length)).object();
+                    req.rawBody = buffer->mid(end + 4, length);
+                    req.body = QJsonDocument::fromJson(req.rawBody).object();
                     *consumed = true;
                     requests.append(req);
                     const auto response = handler ? handler(req) : Response{200, {{"data", QJsonObject{{"ok", true}}}}};

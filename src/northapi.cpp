@@ -1,4 +1,5 @@
 #include "northapi.h"
+#include <QHttpMultiPart>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkReply>
@@ -138,7 +139,7 @@ void NorthApi::startDeviceLogin(const QString &clientId, bool writeAccess, bool 
     if (m_clientId.isEmpty()) { emit loginFailed(tr("Client IDを入力してください。")); return; }
     const auto deviceGeneration = m_deviceGeneration;
     QString scopes = "users.read posts.read notifications.read";
-    if (writeAccess) scopes += " posts.write reactions.write notifications.write polls.vote follows.write";
+    if (writeAccess) scopes += " posts.write reactions.write notifications.write polls.vote follows.write media.write";
     if (messages) scopes += " dm.read dm.write dm.conversations.write";
     send(this, "POST", "/oauth/device/code", {}, {{"client_id", m_clientId}, {"scope", scopes}},
          [this, deviceGeneration](ApiResult r) {
@@ -266,6 +267,25 @@ void NorthApi::request(QObject *context, const QByteArray &method, const QString
 }
 
 void NorthApi::invalidateReads() { ++m_readEpoch; m_readCache.clear(); }
+
+void NorthApi::uploadImage(QObject *context, QByteArray bytes, QByteArray mimeType, Callback callback)
+{
+    if (needsRefresh()) {
+        const QPointer<QObject> guard(context);
+        m_pending.append({context, [this, guard, bytes, mimeType, callback] {
+            if (guard) uploadImage(guard, bytes, mimeType, callback);
+        }, [callback](QString reason) { callback({401, {}, reason, 0}); }});
+        refresh(); return;
+    }
+    if (bytes.isEmpty() || bytes.size() > 100 * 1024 * 1024
+        || !QList<QByteArray>{"image/jpeg", "image/png", "image/webp", "image/gif"}.contains(mimeType)) {
+        QTimer::singleShot(0, context, [callback] { callback({400, {}, tr("対応していない画像か、画像サイズが大きすぎます"), 0}); });
+        return;
+    }
+    auto upload = std::make_shared<ImageUpload>(ImageUpload{std::move(bytes), std::move(mimeType)});
+    // Uploads have no idempotency support. Retry only after an explicit user action.
+    send(context, "POST", "/2/media/upload", {}, {}, std::move(callback), true, {}, std::move(upload));
+}
 
 void NorthApi::clearCaches()
 {
@@ -423,7 +443,7 @@ void NorthApi::downloadMedia(QObject *context, const QUrl &url, MediaCallback ca
 
 void NorthApi::send(QObject *context, const QByteArray &method, const QString &path,
                     const QUrlQuery &query, const QJsonObject &body, Callback callback,
-                    bool authenticatedRequest, const QByteArray &key)
+                    bool authenticatedRequest, const QByteArray &key, std::shared_ptr<const ImageUpload> upload)
 {
     const QPointer<QObject> guard(context);
     const auto generation = m_generation;
@@ -451,11 +471,22 @@ void NorthApi::send(QObject *context, const QByteArray &method, const QString &p
     if (authenticatedRequest) req.setRawHeader("Authorization", "Bearer " + m_accessToken.toUtf8());
     if (!key.isEmpty()) req.setRawHeader("Idempotency-Key", key);
     QByteArray payload;
-    if (method != "GET" && method != "DELETE") {
+    if (!upload && method != "GET" && method != "DELETE") {
         req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
         payload = QJsonDocument(body).toJson(QJsonDocument::Compact);
     }
-    auto *reply = m_network.sendCustomRequest(req, method, payload);
+    QNetworkReply *reply;
+    if (upload) {
+        req.setRawHeader("X-North-Media-Purpose", "posts");
+        auto *multipart = new QHttpMultiPart(QHttpMultiPart::FormDataType);
+        QHttpPart file;
+        const auto extension = upload->mimeType.mid(6) == "jpeg" ? QByteArray("jpg") : upload->mimeType.mid(6);
+        file.setHeader(QNetworkRequest::ContentDispositionHeader, QString::fromLatin1("form-data; name=\"file\"; filename=\"image." + extension + "\""));
+        file.setHeader(QNetworkRequest::ContentTypeHeader, QString::fromLatin1(upload->mimeType));
+        file.setBody(upload->bytes); multipart->append(file);
+        reply = m_network.post(req, multipart); multipart->setParent(reply);
+        connect(context, &QObject::destroyed, reply, &QNetworkReply::abort);
+    } else reply = m_network.sendCustomRequest(req, method, payload);
     m_replies.append(reply);
     connect(reply, &QNetworkReply::finished, this, [this, reply, guard, callback, generation, authenticatedRequest, method] {
         m_replies.removeAll(reply);

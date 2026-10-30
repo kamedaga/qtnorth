@@ -23,6 +23,7 @@ class WindowTitleBar;
 class NotificationsPage;
 class NotificationNavButton;
 class PostReactions;
+class PostComposer;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -72,6 +73,7 @@ private:
     quint64 m_loginAttempt = 0;
     bool m_verified = false, m_usingSaved = false, m_closing = false;
     QSplitter *m_splitter = nullptr;
+    PostComposer *m_inlineComposer = nullptr;
     QWidget *m_inspector = nullptr, *m_details = nullptr, *m_feed = nullptr;
     QVBoxLayout *m_posts = nullptr, *m_detailLayout = nullptr;
     PostReactions *m_postReactions = nullptr;

@@ -69,6 +69,18 @@ QFrame#toolbar, QFrame#postCard, QFrame#userRow { border: none; border-bottom: 1
 QFrame#section, QFrame#dmComposer { border-top: 1px solid {border}; }
 QFrame#postCard, QFrame#userRow { background: {bg}; border-radius: 0px; }
 QFrame#postCard:hover, QFrame#postCard[selected="true"], QFrame#userRow:hover { background: {surface}; }
+QFrame[postComposer="true"] { background: {bg}; border: none; }
+QFrame[postComposer="true"][compact="true"] { border-bottom: 1px solid {border}; }
+QTextEdit#composeText { color: {text}; background: {bg}; border: none; border-radius: 0; padding: 2px 0; font-size: 15px; selection-background-color: {accent}; selection-color: white; }
+QTextEdit#composeText:focus { border: none; }
+QPushButton[composerTool="true"] { background: transparent; border: none; border-radius: 6px; padding: 4px; }
+QPushButton[composerTool="true"]:hover, QPushButton[composerTool="true"]:checked { background: {raised}; }
+QPushButton#composeSend { border-radius: 16px; padding: 6px 14px; }
+QFrame#composeImage { background: {surface}; border: 1px solid {border}; border-radius: 8px; }
+QPushButton#removeComposeImage { border: none; background: transparent; padding: 3px; }
+QFrame#emojiPicker { background: {bg}; border: 1px solid {border}; border-radius: 8px; }
+QPushButton#emojiChoice { background: transparent; border: none; padding: 2px; font-size: 22px; }
+QPushButton#emojiChoice:hover { background: {raised}; }
 QLabel#notificationBadge { background: #1c71d8; color: #ffffff; border: none; border-radius: 12px; font-size: 10px; font-weight: 700; }
 QWidget#notificationsPage, QWidget#notificationsCanvas { background: {bg}; }
 QFrame#notificationRow { background: {bg}; border: none; border-bottom: 1px solid {border}; }

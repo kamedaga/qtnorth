@@ -16,6 +16,7 @@
 #include "reactionusers.h"
 #include "remoteimage.h"
 #include "userrelations.h"
+#include "postcomposer.h"
 #include <QJsonDocument>
 #include <QApplication>
 #include <QCheckBox>
@@ -303,6 +304,13 @@ QWidget *MainWindow::makeWorkspace()
         m_query = m_search->text().trimmed();
         if (!m_query.isEmpty()) loadPosts();
     });
+    m_inlineComposer = new PostComposer(&m_api, true, {}, m_feed);
+    m_inlineComposer->setObjectName("inlineComposer"); m_inlineComposer->hide();
+    feedLayout->addWidget(m_inlineComposer);
+    connect(m_inlineComposer, &PostComposer::posted, this, [this] {
+        m_status->setText(tr("ポストしました"));
+        if ((m_view == "home" || m_view == "ranked") && m_content->currentWidget() == m_scroll && !m_postPageVisible) loadPosts();
+    });
     feedLayout->addWidget(m_search);
     m_notice = label({}, "notice", true);
     m_notice->setTextInteractionFlags(Qt::TextSelectableByMouse);
@@ -448,6 +456,7 @@ QWidget *MainWindow::basePage() const
 
 void MainWindow::navigate(const QString &view)
 {
+    m_inlineComposer->setVisible(m_verified && (view == "home" || view == "ranked"));
     if (m_verified && view == m_view && m_content->currentWidget() == basePage() && view != "profile") {
         refreshCurrentPage(); return;
     }
@@ -766,6 +775,7 @@ void MainWindow::showError(const QString &message)
 void MainWindow::updateSession()
 {
     const bool connected = m_api.authenticated();
+    m_inlineComposer->setUser(connected ? m_me : QJsonObject{});
     m_sessionName->setText(m_me.value("name").toString());
     m_sessionHandle->setText(connected ? "@" + m_me.value("handle").toString() : QString());
     m_sessionName->setVisible(connected);
@@ -925,101 +935,22 @@ void MainWindow::compose(const QJsonObject &reply)
     if (!m_verified || !m_api.authenticated()) { if (m_shell->currentWidget() != m_loginPage) login(); return; }
     if (!m_api.allowsScope("posts.write")) { showError(tr("この認証には投稿の権限がありません。書き込みを許可して再ログインしてください。")); return; }
     auto *dialog = new QDialog(this);
-    dialog->setObjectName("composeDialog");
-    dialog->setAttribute(Qt::WA_DeleteOnClose);
-    dialog->setWindowTitle(reply.isEmpty() ? tr("新規ポスト") : tr("返信"));
-    dialog->resize(520, 355);
-    auto *root = new QVBoxLayout(dialog);
-    root->setContentsMargins(0, 0, 0, 0); root->setSpacing(0);
-    root->addWidget(new WindowTitleBar(dialog, false));
-    auto *body = new QWidget; root->addWidget(body);
-    auto *layout = new QVBoxLayout(body);
-    layout->setContentsMargins(22, 22, 22, 20);
-    layout->setSpacing(14);
-    if (!reply.isEmpty()) layout->addWidget(label(tr("@%1 に返信").arg(reply.value("author").toObject().value("handle").toString()), "authorName"));
-    auto *editor = new QPlainTextEdit;
-    editor->setObjectName("composeText");
-    editor->setPlaceholderText(tr("本文"));
-    layout->addWidget(editor);
-    auto *withPoll = new QCheckBox(tr("アンケート")); withPoll->setObjectName("composePoll"); layout->addWidget(withPoll);
-    withPoll->setToolTip(tr("選択肢は2〜4件、各25文字まで。重複する選択肢は使えません。期間は5分〜7日です"));
-    auto *pollOptions = new QWidget; auto *pollLayout = new QVBoxLayout(pollOptions);
-    pollLayout->setContentsMargins(0, 0, 0, 0); pollLayout->setSpacing(6);
-    QList<QLineEdit *> choices;
-    for (int i = 0; i < 4; ++i) {
-        auto *choice = new QLineEdit; choice->setObjectName(QString("pollOption%1Input").arg(i + 1)); choice->setMaxLength(25);
-        choice->setPlaceholderText(i < 2 ? tr("選択肢 %1").arg(i + 1) : tr("選択肢 %1（任意）").arg(i + 1));
-        choice->setAccessibleName(choice->placeholderText()); pollLayout->addWidget(choice); choices.append(choice);
-    }
-    auto *duration = new QComboBox; duration->setObjectName("pollDuration"); duration->setAccessibleName(tr("投票期間"));
-    for (const auto &entry : QList<QPair<QString, int>>{{tr("5分"), 5}, {tr("30分"), 30}, {tr("1時間"), 60}, {tr("6時間"), 360}, {tr("1日"), 1440}, {tr("3日"), 4320}, {tr("7日"), 10080}})
-        duration->addItem(entry.first, entry.second);
-    duration->setCurrentIndex(duration->findData(1440)); pollLayout->addWidget(duration);
-    pollOptions->hide(); layout->addWidget(pollOptions);
-    connect(withPoll, &QCheckBox::toggled, dialog, [dialog, pollOptions](bool enabled) { pollOptions->setVisible(enabled); dialog->resize(dialog->width(), enabled ? 580 : 355); });
-    auto *error = label({}, "notice", true);
-    error->hide();
-    layout->addWidget(error);
-    auto *row = new QHBoxLayout;
-    auto *count = label("0 / 280", "muted");
-    auto *cancel = button(tr("キャンセル"));
-    auto *send = button(reply.isEmpty() ? tr("投稿") : tr("返信"), {}, "primary");
-    send->setObjectName("composeSend");
-    send->setEnabled(false);
-    row->addWidget(count); row->addStretch(); row->addWidget(cancel); row->addWidget(send);
-    layout->addLayout(row);
-    connect(cancel, &QPushButton::clicked, dialog, &QDialog::reject);
-    auto sending = std::make_shared<bool>(false);
-    auto validate = [editor, count, send, choices, withPoll, sending] {
-        const auto text = editor->toPlainText();
-        const int weight = North::textWeight(text);
-        count->setText(QString::number(weight) + " / 280");
-        count->setStyleSheet(weight > 280 ? "color:#c45b57;" : "color:#919191;");
-        int options = 0; QSet<QString> labels;
-        for (auto *choice : choices) if (!choice->text().trimmed().isEmpty()) { ++options; labels.insert(choice->text().trimmed().toLower()); }
-        const bool validPoll = !withPoll->isChecked() || (options >= 2 && labels.size() == options && !choices[0]->text().trimmed().isEmpty() && !choices[1]->text().trimmed().isEmpty());
-        send->setEnabled(!*sending && !text.trimmed().isEmpty() && weight <= 280 && validPoll);
-    };
-    connect(editor, &QPlainTextEdit::textChanged, dialog, validate);
-    connect(withPoll, &QCheckBox::toggled, dialog, validate);
-    for (auto *choice : choices) connect(choice, &QLineEdit::textChanged, dialog, validate);
-    // Reuse the key for identical retries, including poll choices and duration.
-    auto key = std::make_shared<QByteArray>(NorthApi::newIdempotencyKey());
-    auto lastBody = std::make_shared<QByteArray>();
+    dialog->setObjectName("composeDialog"); dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->setWindowTitle(reply.isEmpty() ? tr("新規ポスト") : tr("返信")); dialog->resize(620, 390);
+    auto *layout = new QVBoxLayout(dialog); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(0);
+    layout->addWidget(new WindowTitleBar(dialog, false));
+    auto *composer = new PostComposer(&m_api, false, reply, dialog); composer->setUser(m_me); layout->addWidget(composer);
     const QString composeView = m_view;
-    connect(send, &QPushButton::clicked, dialog, [this, dialog, editor, error, send, reply, key, lastBody, composeView, choices, withPoll, duration, pollOptions, sending, validate] {
-        const QString text = editor->toPlainText();
-        QJsonObject body{{"text", text}};
-        if (!reply.isEmpty()) body.insert("reply", QJsonObject{{"in_reply_to_tweet_id", reply.value("id")}});
-        if (withPoll->isChecked()) {
-            QJsonArray options; for (auto *choice : choices) if (!choice->text().trimmed().isEmpty()) options.append(choice->text().trimmed());
-            body.insert("poll", QJsonObject{{"options", options}, {"durationMinutes", duration->currentData().toInt()}});
-        }
-        const auto payload = QJsonDocument(body).toJson(QJsonDocument::Compact);
-        if (!lastBody->isEmpty() && payload != *lastBody) *key = NorthApi::newIdempotencyKey();
-        *lastBody = payload; *sending = true;
-        send->setEnabled(false);
-        editor->setReadOnly(true);
-        pollOptions->setEnabled(false); withPoll->setEnabled(false);
-        error->hide();
-        m_api.request(dialog, "POST", "/2/tweets", {}, body, [this, dialog, editor, error, composeView, pollOptions, withPoll, sending, validate](ApiResult r) {
-            if (!r.ok()) {
-                error->setText(r.error + tr("\n結果が不明な場合は、同じ本文で再試行するかnorthで投稿を確認してください。"));
-                *sending = false; error->show(); editor->setReadOnly(false); pollOptions->setEnabled(true); withPoll->setEnabled(true); validate(); return;
-            }
-            dialog->accept();
-            m_status->setText(tr("ポストしました"));
-            if (m_postPageVisible) openPost(m_openPost, false);
-            else if (m_content->currentWidget() == m_profilePage) m_profilePage->reload();
-            else if (m_content->currentWidget() == m_notificationsPage) m_notificationsPage->reload();
-            else if (composeView == m_view && m_view != "messages") loadPosts();
-        }, *key);
+    connect(composer, &PostComposer::posted, dialog, [this, dialog, composeView] {
+        dialog->accept(); m_status->setText(tr("ポストしました"));
+        if (m_postPageVisible) openPost(m_openPost, false);
+        else if (m_content->currentWidget() == m_profilePage) m_profilePage->reload();
+        else if (m_content->currentWidget() == m_notificationsPage) m_notificationsPage->reload();
+        else if (composeView == m_view && m_view != "messages") loadPosts();
     });
-    // Destroy an open composer when changing accounts.
     connect(&m_api, &NorthApi::sessionExpired, dialog, &QDialog::reject);
     connect(&m_api, &NorthApi::loggedOut, dialog, &QDialog::reject);
-    dialog->open();
-    editor->setFocus();
+    dialog->open(); composer->editor()->setFocus();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event)

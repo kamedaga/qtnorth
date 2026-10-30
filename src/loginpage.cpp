@@ -15,7 +15,7 @@
 
 namespace {
 // Public client identifier registered for qtNorth; this is not a secret.
-constexpr auto oauthClientId = "cmvv27dcd00dlgkrdx8q6vnxi";
+constexpr auto oauthClientId = "cmvv3xndx00gogkrd5zc7iis3";
 }
 
 LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
@@ -68,7 +68,7 @@ LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
     auto *oauthLayout = new QVBoxLayout(oauth);
     oauthLayout->setContentsMargins(0, 14, 0, 0); oauthLayout->setSpacing(12);
     auto *write = new QCheckBox(tr("書き込みを許可")); write->setChecked(true);
-    write->setToolTip(tr("投稿・投票・フォロー・リアクション・通知を既読にする操作"));
+    write->setToolTip(tr("投稿・画像添付・投票・フォロー・リアクション・通知を既読にする操作"));
     m_messages = new QCheckBox(tr("メッセージを許可"));
     m_messages->setObjectName("allowMessages");
     m_messages->setToolTip(tr("参加している会話の読み取り、会話作成、送信"));
@@ -85,7 +85,7 @@ LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
     m_token = new QLineEdit;
     m_token->setObjectName("personalToken");
     m_token->setEchoMode(QLineEdit::Password); m_token->setPlaceholderText("nth_oat_…");
-    m_token->setToolTip(tr("必要な権限: users.read / posts.read / notifications.read\n投稿: posts.write / reactions.write\n投票: polls.vote\nフォロー: follows.write\n通知の既読: notifications.write\nメッセージ: dm.read / dm.write / dm.conversations.write"));
+    m_token->setToolTip(tr("必要な権限: users.read / posts.read / notifications.read\n投稿: posts.write / reactions.write\n画像添付: media.write\n投票: polls.vote\nフォロー: follows.write\n通知の既読: notifications.write\nメッセージ: dm.read / dm.write / dm.conversations.write"));
     auto *submit = new QPushButton(tr("ログイン")); submit->setObjectName("tokenLogin");
     auto submitToken = [this] {
         const auto token = m_token->text().trimmed();
