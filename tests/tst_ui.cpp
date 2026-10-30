@@ -501,9 +501,18 @@ private slots:
         auto *dialog = window.findChild<QDialog *>("aboutDialog"); QVERIFY(dialog);
         QTRY_VERIFY(dialog->isVisible());
         capture(*dialog, "about-dark");
-        QTest::mouseClick(findButton(*dialog, QString::fromUtf8("使用ライブラリー")), Qt::LeftButton);
+        QTest::mouseClick(findButton(*dialog, QString::fromUtf8("ライセンスと使用ライブラリー")), Qt::LeftButton);
         auto *pages = dialog->findChild<QStackedWidget *>("aboutPages");
         QCOMPARE(pages->currentIndex(), 1);
+        auto *licenseSelector = dialog->findChild<QComboBox *>("aboutLicenseSelector"); QVERIFY(licenseSelector);
+        auto *licenseText = dialog->findChild<QPlainTextEdit *>("aboutLicenseText"); QVERIFY(licenseText);
+        QVERIFY(licenseText->isReadOnly());
+        licenseSelector->setCurrentIndex(licenseSelector->findData(":/LICENSE"));
+        QVERIFY(licenseText->toPlainText().contains("Permission to use, copy, modify"));
+        licenseSelector->setCurrentIndex(licenseSelector->findData(":/licenses/LICENSES/LGPL-3.0-only.txt"));
+        QVERIFY(licenseText->toPlainText().contains("GNU LESSER GENERAL PUBLIC LICENSE"));
+        licenseSelector->setCurrentIndex(licenseSelector->findData(":/licenses/Qt-6.10.3-third-party-notices.txt"));
+        QVERIFY(licenseText->toPlainText().contains("Copyright"));
         for (auto *label : dialog->findChildren<QLabel *>()) {
             QVERIFY(!label->text().contains(QString::fromUtf8("デザインの参考")));
             QVERIFY(!label->text().contains("libadwaita"));

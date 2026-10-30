@@ -9,3 +9,4 @@ lib/・plugins/を含むフォルダー全体を同じ配置で使用してく�
 認証情報の保存にはD-BusとSecret Service対応キーリングまたはKWalletが必要です。
 WSLではWindowsの資格情報ストアを使用します。
 ソースはsource/、同梱ライブラリーのライセンスはlicenses/にあります。
+qtNorthのライセンスはLICENSE（0BSD）、依存ライブラリーの案内はTHIRD_PARTY_NOTICES.txtを参照してください。

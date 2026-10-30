@@ -1,0 +1,378 @@
+Qt 6.10.3 third-party notices (Windows distribution)
+
+Attributions from the official Qt 6.10.3 SDK SPDX documents for qtbase, qtsvg and qtimageformats.
+This includes upstream module attributions for components not necessarily enabled in this build.
+Standard license texts are in LICENSES/. Qt itself is used under LGPL-3.0-only.
+Upstream: https://code.qt.io/cgit/qt/qtbase.git/?h=v6.10.3
+https://code.qt.io/cgit/qt/qtsvg.git/?h=v6.10.3
+https://code.qt.io/cgit/qt/qtimageformats.git/?h=v6.10.3
+
+qtbase-6.10.3.spdx.json SHA256 51bdcf25ae10a6af0ce10030bf816ab10da0b2f70b35e0e9c55bd4b43241e659
+qtsvg-6.10.3.spdx.json SHA256 5df1b21331a959d2b4913a3ca3e1a7cd1d032622c6b5710842aa59c02f3eeb9d
+qtimageformats-6.10.3.spdx.json SHA256 9b62694955d3f60f8b7f79f50f35f9d4c49bc702b731b3378e337ee8b7813fd0
+
+========================================================================
+aglfn
+Copyright 2002, 2003, 2005, 2006, 2008, 2010, 2015 Adobe Systems
+License: BSD-3-Clause
+Source: https://github.com/adobe-type-tools/agl-aglfn
+
+========================================================================
+blake2
+Copyright 2012, Samuel Neves <sneves@dei.uc.pt>
+License: CC0-1.0 OR Apache-2.0
+Source: https://github.com/BLAKE2/BLAKE2/tree/ed1974ea83433eba7b2d95c5dcd9ac33cb847913
+
+========================================================================
+catch2
+Copyright (c) 2022 Two Blue Cubes Ltd. All rights reserved.
+License: BSL-1.0
+Source: https://github.com/catchorg/Catch2
+
+========================================================================
+cmake-runcmake-test-modules
+Copyright © 2000-2024 Kitware, Inc. and Contributors
+License: BSD-3-Clause
+Source: https://cmake.org/
+
+========================================================================
+cycle
+Copyright (c) 2003, 2007-14 Matteo Frigo
+Copyright (c) 2003, 2007-14 Massachusetts Institute of Technology
+License: MIT
+Source: http://fftw.org/
+
+========================================================================
+d3d12memoryallocator
+Copyright (c) 2019-2022 Advanced Micro Devices, Inc. All rights reserved.
+License: MIT
+Source: https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator
+
+========================================================================
+doubleconversion
+Copyright 2006-2012, the V8 project authors
+License: BSD-3-Clause
+Source: https://github.com/google/double-conversion/releases/tag/v3.4.0
+
+========================================================================
+easing
+Copyright (c) 2001 Robert Penner
+License: BSD-3-Clause
+Source: http://robertpenner.com/easing/
+
+========================================================================
+emoji-segmenter
+Copyright 2019 Google LLC
+License: Apache-2.0
+Source: https://github.com/google/emoji-segmenter/releases/tag/0.4.0
+
+========================================================================
+extra-cmake-modules
+Copyright © 2011-2018 The KDE community
+License: BSD-3-Clause
+Source: https://api.kde.org/ecm/
+
+========================================================================
+freetype-bdf
+Copyright (c) 2000 Computing Research Labs, New Mexico State University
+Copyright (c) 2001-2014 Francesco Zappa Nardelli
+License: MIT
+Source: https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+========================================================================
+freetype-pcf
+Copyright (c) 2001, 2012 David Turner, Robert Wilhelm, and Werner Lemberg
+Copyright (c) 2000-2014 Francesco Zappa Nardelli
+Copyright (c) 1990, 1994, 1998 The Open Group
+License: MIT AND MIT-open-group
+Source: https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+========================================================================
+freetype-zlib
+Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
+License: Zlib
+Source: https://download.savannah.gnu.org/releases/freetype/freetype-2.14.3.tar.gz
+
+========================================================================
+grayraster
+Copyright 2000-2016 by David Turner, Robert Wilhelm, and Werner Lemberg.
+License: FTL OR GPL-2.0-only
+Source: http://www.freetype.org
+
+========================================================================
+icc-srgb-color-profile
+Copyright International Color Consortium, 2015
+License: LicenseRef-ICC-License
+Source: http://www.color.org/
+
+========================================================================
+kwin
+Copyright 2014 Alex Merry <alex.merry@kde.org>
+Copyright 2014 Martin Gräßlin <mgraesslin@kde.org>
+Copyright (c) 2006,2007 Laurent Montel, <montel@kde.org>
+License: BSD-3-Clause
+Source: https://www.kde.org/
+
+========================================================================
+libdbus-1-headers
+Copyright (C) 2002, 2003 CodeFactory AB
+Copyright (C) 2004, 2005 Red Hat, Inc.
+License: AFL-2.1 OR GPL-2.0-or-later
+Source: https://www.freedesktop.org/wiki/Software/dbus/
+
+========================================================================
+libpsl
+Copyright 2014-2016 The Chromium Authors. All rights reserved.
+License: BSD-3-Clause
+Source: https://github.com/rockdaboot/libpsl
+
+========================================================================
+libtiff
+Copyright (c) 1988-1997 Sam Leffler
+Copyright (c) 1991-1997 Silicon Graphics, Inc.
+License: libtiff
+Source: https://download.osgeo.org/libtiff/tiff-4.7.1.tar.gz
+
+========================================================================
+libwebp
+Copyright (c) 2010, Google Inc. All rights reserved.
+License: BSD-3-Clause
+Source: https://storage.googleapis.com/downloads.webmproject.org/releases/webp/libwebp-1.6.0.tar.gz
+
+========================================================================
+linuxperf
+Copyright (C) 2008-2009, Thomas Gleixner <tglx@linutronix.de>
+Copyright (C) 2008-2011, Red Hat, Inc., Ingo Molnar
+Copyright (C) 2008-2011, Red Hat, Inc., Peter Zijlstra
+License: GPL-2.0-only WITH Linux-syscall-note
+Source: https://www.kernel.org
+
+========================================================================
+md4
+Written by Alexander Peslyak - better known as Solar Designer <solar@openwall.com> - in 2001, and placed in the public domain. There's absolutely no warranty.
+License: CC0-1.0
+Source: NOASSERTION
+
+========================================================================
+md4c
+Copyright © 2016-2024 Martin Mitáš
+License: MIT
+Source: https://github.com/mity/md4c/releases/tag/release-0.5.2
+
+========================================================================
+md5
+Written by Colin Plumb in 1993, no copyright is claimed. Ian Jackson <ian@chiark.greenend.org.uk>.
+License: CC0-1.0
+Source: NOASSERTION
+
+========================================================================
+opengl-es2-headers
+Copyright (c) 2013-2014 The Khronos Group Inc.
+License: MIT
+Source: https://www.khronos.org/
+
+========================================================================
+opengl-headers
+Copyright (c) 2013-2014 The Khronos Group Inc.
+License: MIT
+Source: https://www.khronos.org/
+
+========================================================================
+pcre2
+Copyright (c) 1997-2007 University of Cambridge
+Copyright (c) 2007-2024 Philip Hazel
+Copyright (c) 2010-2024 Zoltan Herczeg
+License: LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception
+Source: https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2
+
+========================================================================
+pcre2-sljit
+Copyright Zoltan Herczeg
+License: BSD-2-Clause
+Source: https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.bz2
+
+========================================================================
+psl-data
+The list was originally provided by Jo Hermans <jo.hermans@gmail.com>.
+It is now maintained on github (https://github.com/publicsuffix/list).
+License: MPL-2.0
+Source: https://publicsuffix.org/list/public_suffix_list.dat
+
+========================================================================
+rfc6234
+Copyright (c) 2011 IETF Trust and the persons identified as authors of the code.
+License: BSD-3-Clause
+Source: NOASSERTION
+
+========================================================================
+rhi-miniengine-d3d12-mipmap
+Copyright (c) 2015 Microsoft
+License: MIT
+Source: https://github.com/microsoft/DirectX-Graphics-Samples
+
+========================================================================
+sha1
+Copyright (C) Dominik Reichl <dominik.reichl@t-online.de>
+Copyright (C) 2016 The Qt Company Ltd
+License: LicenseRef-SHA1-Public-Domain
+Source: http://www.dominik-reichl.de/projects/csha1/
+
+========================================================================
+sha3_endian
+Copyright (c) 1998-2013, Brian Gladman, Worcester, UK. All rights reserved.
+License: BSD-2-Clause
+Source: NOASSERTION
+
+========================================================================
+sha3_keccak
+Guido Bertoni, Joan Daemen, Michaël Peeters and Gilles Van Assche.
+To the extent possible under law, the implementers have waived all copyright
+and related or neighboring rights to the source code in this file.
+License: CC0-1.0
+Source: NOASSERTION
+
+========================================================================
+siphash
+Copyright (C) 2012-2014 Jean-Philippe Aumasson
+Copyright (C) 2012-2014 Daniel J. Bernstein <djb@cr.yp.to>
+Copyright (C) 2016 Intel Corporation
+License: CC0-1.0
+Source: https://raw.githubusercontent.com/veorq/SipHash/adcbf09b1684a718f594faa650ffc56bacdb0777/siphash24.c
+
+========================================================================
+smooth-scaling-algorithm
+Copyright (C) 2004, 2005 Daniel M. Duley.
+(C) Carsten Haitzler and various contributors.
+(C) Willem Monsuwe <willem@stack.nl>
+License: BSD-2-Clause AND Imlib2
+Source: NOASSERTION
+
+========================================================================
+sqlite
+The authors disclaim copyright to the source code. However, a license can be obtained if needed.
+License: blessing
+Source: https://www.sqlite.org/2026/sqlite-amalgamation-3510300.zip
+
+========================================================================
+tika-mimetypes
+Copyright 2026 The Apache Software Foundation
+License: Apache-2.0
+Source: https://github.com/apache/tika/blob/408c26e1e03e018a623e732dff6fb047a2fb8e19/tika-core/src/main/resources/org/apache/tika/mime/tika-mimetypes.xml
+
+========================================================================
+tinycbor
+Copyright (C) 2015-2025 Intel Corporation
+License: MIT
+Source: https://github.com/intel/tinycbor/archive/v7.0/tinycbor-7.0.tar.gz
+
+========================================================================
+tlexpected
+To the extent possible under law, Sy Brand has waived all copyright and related or neighboring rights to the expected library. This work is published from: United Kingdom.
+License: CC0-1.0
+Source: https://github.com/TartanLlama/expected/blob/41d3e1f48d682992a2230b2a715bca38b848b269/include/tl/expected.hpp
+
+========================================================================
+unicode-character-database
+Copyright (C) 1991-2025 Unicode, Inc.
+License: Unicode-3.0
+Source: https://www.unicode.org/ucd/
+
+========================================================================
+unicode-cldr
+Copyright (C) 2004-2025 Unicode, Inc.
+License: Unicode-3.0
+Source: https://cldr.unicode.org/
+
+========================================================================
+valgrind
+Copyright (C) 2000-2017 Julian Seward
+Copyright (C) 2003-2017 Josef Weidendorfer.
+License: BSD-4-Clause
+Source: http://valgrind.org/
+
+========================================================================
+vulkan-xml-spec
+Copyright (c) 2015-2025 The Khronos Group Inc.
+License: Apache-2.0 OR MIT
+Source: https://www.khronos.org/
+
+========================================================================
+vulkanmemoryallocator
+Copyright (c) 2017-2025 Advanced Micro Devices, Inc. All rights reserved.
+License: MIT
+Source: https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator
+
+========================================================================
+webgradients
+Copyright (c) 2017 itmeo
+License: MIT
+Source: https://webgradients.com/
+
+========================================================================
+wintab
+Copyright 1991-1998 by LCS/Telegraphics.
+License: LicenseRef-Lcs-Telegraphics
+Source: NOASSERTION
+
+========================================================================
+xserverhelper
+Copyright (c) 1987, 1988 X Consortium
+Copyright 1987, 1988 by Digital Equipment Corporation, Maynard, Massachusetts.
+License: X11 AND HPND
+Source: https://www.x.org/
+
+========================================================================
+xsvg
+Copyright 2002 USC/Information Sciences Institute
+License: HPND-sell-variant
+Source: NOASSERTION
+
+========================================================================
+zlib
+(C) 1995-2026 Jean-loup Gailly and Mark Adler
+License: Zlib
+Source: https://github.com/madler/zlib/releases/download/v1.3.2/zlib-1.3.2.tar.gz
+
+========================================================================
+LicenseRef-BSD-3-Clause-with-PCRE2-Binary-Like-Packages-Exception
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+    1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+    2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+    3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+EXEMPTION FOR BINARY LIBRARY-LIKE PACKAGES
+------------------------------------------
+
+The second condition in the BSD licence (covering binary redistributions) does not apply all the way down a chain of software. If binary package A includes PCRE2, it must respect the condition, but if package B is software that includes package A, the condition is not imposed on package B unless it uses PCRE2 independently.
+
+
+========================================================================
+LicenseRef-ICC-License
+For the file sRGB2014.icc:
+
+Copyright International Color Consortium, 2015
+
+This profile is made available by the International Color Consortium, and may be copied,
+distributed, embedded, made, used, and sold without restriction. Altered versions of this
+profile shall have the original identification and copyright information removed and
+shall not be misrepresented as the original profile.
+
+(original source location: http://www.color.org/srgbprofiles.xalter)
+
+
+========================================================================
+LicenseRef-Lcs-Telegraphics
+The text and information contained in this file may be freely used,
+copied, or distributed without compensation or licensing restrictions.
+
+
+========================================================================
+LicenseRef-SHA1-Public-Domain
+100% free public domain implementation of the SHA-1 algorithm
+by Dominik Reichl <dominik.reichl@t-online.de>
+Web: http://www.dominik-reichl.de/
+
+

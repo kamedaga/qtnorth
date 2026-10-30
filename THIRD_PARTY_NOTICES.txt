@@ -1,0 +1,68 @@
+qtNorth — third-party notices
+
+qtNorth's own code is licensed under the BSD Zero Clause License (0BSD).
+See LICENSE. That license does not replace the licenses of dependencies.
+
+Qt 6
+----
+Copyright (C) The Qt Company Ltd. and other contributors.
+The Qt libraries used by qtNorth are dynamically linked and used under
+GNU Lesser General Public License version 3 (LGPL-3.0-only).
+The full LGPL v3 and its incorporated GPL v3 text are included in:
+  licenses/LICENSES/LGPL-3.0-only.txt
+  licenses/LICENSES/GPL-3.0-only.txt
+
+The libraries may be replaced with compatible modified builds. qtNorth's
+source and build instructions are included in source/ in the Linux and
+FreeBSD archives and are available at:
+  https://github.com/kamedaga/qtnorth
+
+Qt includes code from additional copyright holders. Their notices and
+license texts are included under licenses/ and remain applicable.
+
+Windows distribution: Qt 6.10.3
+  Qt Core, GUI, Widgets, Network, SVG, and deployed plugins.
+  Attributions from the official SDK's SPDX documents are collected in
+  licenses/Qt-6.10.3-third-party-notices.txt; standard license texts are
+  in licenses/LICENSES/. These upstream module notices also cover optional
+  components not necessarily used by qtNorth.
+  Matching sources:
+  https://download.qt.io/official_releases/qt/6.10/6.10.3/single/
+  https://code.qt.io/cgit/qt/qtbase.git/?h=v6.10.3
+  https://code.qt.io/cgit/qt/qtsvg.git/?h=v6.10.3
+  https://code.qt.io/cgit/qt/qtimageformats.git/?h=v6.10.3
+
+Linux distribution: Qt 6.4.2 (Ubuntu 24.04 packages)
+  Qt libraries/plugins and their bundled dependencies have the copyright
+  and license notices from their matching binary packages in licenses/.
+  A repository copy of these notices is also included in licenses/linux/.
+  The individual .copyright documents identify source packages, copyright
+  holders, licenses, and source locations.
+  https://launchpad.net/ubuntu/+source/qt6-base
+  https://launchpad.net/ubuntu/+source/qt6-svg
+  https://launchpad.net/ubuntu/+source/qt6-wayland
+  https://launchpad.net/ubuntu/+source/qt6-imageformats
+
+FreeBSD distribution
+  Qt and QtKeychain are installed separately using pkg, rather than bundled
+  in the qtNorth archive. build-info.txt records the tested package versions.
+  The installed packages provide their own license notices. Qt source:
+  https://code.qt.io/cgit/qt/qtbase.git/?h=v6.11.2
+  https://code.qt.io/cgit/qt/qtsvg.git/?h=v6.11.2
+  https://code.qt.io/cgit/qt/qtimageformats.git/?h=v6.11.2
+
+Qt licensing and third-party documentation:
+  https://doc.qt.io/qt-6/licensing.html
+  https://doc.qt.io/qt-6/licenses-used-in-qt.html
+
+QtKeychain
+----------
+QtKeychain is used under its BSD 3-clause license.
+See licenses/QtKeychain.txt and the package copyright notices.
+  https://github.com/frankosterfeld/qtkeychain
+
+Microsoft Visual C++ runtime (Windows)
+-------------------------------------
+The optional runtime/vc_redist.x64.exe is Microsoft's signed runtime
+installer. Microsoft's terms apply to that installer and its components.
+  https://visualstudio.microsoft.com/license-terms/

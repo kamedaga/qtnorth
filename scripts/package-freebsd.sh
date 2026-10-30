@@ -27,10 +27,13 @@ mkdir -p "$qtnorth_stage/share/applications" "$qtnorth_stage/share/icons/hicolor
 install -m 644 "$qtnorth_root/packaging/rip.north.qtNorth.desktop" "$qtnorth_stage/share/applications/"
 install -m 644 "$qtnorth_root/assets/qtNorth-icon.svg" "$qtnorth_stage/share/icons/hicolor/scalable/apps/qtnorth.svg"
 mkdir -p "$qtnorth_stage/source"
-for qtnorth_item in src assets scripts packaging tests docs CMakeLists.txt README.md DISCLAIMER.txt .gitignore; do
+for qtnorth_item in src assets scripts packaging tests docs licenses CMakeLists.txt README.md DISCLAIMER.txt LICENSE THIRD_PARTY_NOTICES.txt .gitignore .gitattributes; do
     cp -R "$qtnorth_root/$qtnorth_item" "$qtnorth_stage/source/"
 done
 install -m 644 "$qtnorth_root/DISCLAIMER.txt" "$qtnorth_stage/DISCLAIMER.txt"
+install -m 644 "$qtnorth_root/LICENSE" "$qtnorth_stage/LICENSE"
+install -m 644 "$qtnorth_root/THIRD_PARTY_NOTICES.txt" "$qtnorth_stage/THIRD_PARTY_NOTICES.txt"
+cp -R "$qtnorth_root/licenses" "$qtnorth_stage/licenses"
 find "$qtnorth_stage/source" -type d -name __pycache__ -prune -exec rm -rf {} +
 {
     freebsd-version -u

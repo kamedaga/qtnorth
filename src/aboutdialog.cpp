@@ -8,6 +8,9 @@
 #include <QDialog>
 #include <QFrame>
 #include <QFile>
+#include <QDirIterator>
+#include <QComboBox>
+#include <QPlainTextEdit>
 #include <QLabel>
 #include <QPushButton>
 #include <QScrollArea>
@@ -79,7 +82,7 @@ void showAboutDialog(QWidget *parent)
     auto *api = row(links, QObject::tr("APIドキュメント"), "external");
     QObject::connect(api, &QPushButton::clicked, dialog, [] { QDesktopServices::openUrl(QUrl("https://api.north.rip/docs")); });
     auto *details = group(layout);
-    auto *libraries = row(details, QObject::tr("使用ライブラリー"), "chevron");
+    auto *libraries = row(details, QObject::tr("ライセンスと使用ライブラリー"), "chevron");
     separator = new QFrame; separator->setObjectName("aboutSeparator"); separator->setFixedHeight(1); details->addWidget(separator);
     auto *system = row(details, QObject::tr("システム情報"), "chevron");
     separator = new QFrame; separator->setObjectName("aboutSeparator"); separator->setFixedHeight(1); details->addWidget(separator);
@@ -96,7 +99,25 @@ void showAboutDialog(QWidget *parent)
         pages->addWidget(page);
         QObject::connect(button, &QPushButton::clicked, pages, [pages, page, back] { pages->setCurrentWidget(page); back->show(); });
     };
-    addDetails(libraries, QObject::tr("使用ライブラリー"), QObject::tr("Qt %1\nQtKeychain").arg(QString::fromLatin1(qVersion())));
+    auto *licensePage = new QWidget; licensePage->setObjectName("aboutPage");
+    auto *licenseLayout = new QVBoxLayout(licensePage); licenseLayout->setContentsMargins(18, 18, 18, 18); licenseLayout->setSpacing(12);
+    licenseLayout->addWidget(text(QObject::tr("ライセンス"), "title"));
+    auto *selector = new QComboBox; selector->setObjectName("aboutLicenseSelector"); selector->setAccessibleName(QObject::tr("ライセンスを選択"));
+    selector->addItem(QObject::tr("概要 · Qt %1 / QtKeychain").arg(QString::fromLatin1(qVersion())), ":/THIRD_PARTY_NOTICES.txt");
+    selector->addItem("qtNorth — 0BSD", ":/LICENSE");
+    selector->addItem("Qt 6 — LGPL v3", ":/licenses/LICENSES/LGPL-3.0-only.txt");
+    selector->addItem("GNU GPL v3", ":/licenses/LICENSES/GPL-3.0-only.txt");
+    selector->addItem("QtKeychain — BSD 3-clause", ":/licenses/QtKeychain.txt");
+    selector->addItem(QObject::tr("Qt 6.10.3 — サードパーティー"), ":/licenses/Qt-6.10.3-third-party-notices.txt");
+    QStringList noticePaths; QDirIterator files(":/licenses", QDir::Files, QDirIterator::Subdirectories);
+    while (files.hasNext()) noticePaths.append(files.next()); noticePaths.sort();
+    for (const auto &path : noticePaths) if (selector->findData(path) < 0) selector->addItem(path.mid(QString(":/licenses/").size()), path);
+    licenseLayout->addWidget(selector);
+    auto *licenseText = new QPlainTextEdit; licenseText->setObjectName("aboutLicenseText"); licenseText->setReadOnly(true); licenseLayout->addWidget(licenseText, 1);
+    auto loadLicense = [selector, licenseText] { QFile file(selector->currentData().toString()); licenseText->setPlainText(file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QObject::tr("ライセンス文書を読み込めませんでした")); };
+    QObject::connect(selector, &QComboBox::currentIndexChanged, licensePage, loadLicense); loadLicense();
+    pages->addWidget(licensePage);
+    QObject::connect(libraries, &QPushButton::clicked, pages, [pages, licensePage, back] { pages->setCurrentWidget(licensePage); back->show(); });
     addDetails(system, QObject::tr("システム情報"), QString("qtNorth %1\nQt %2\n%3\n%4").arg(QStringLiteral(QTNORTH_VERSION), QString::fromLatin1(qVersion()), QSysInfo::prettyProductName(), QApplication::platformName()));
     QFile disclaimerFile(":/DISCLAIMER.txt");
     if (disclaimerFile.open(QIODevice::ReadOnly)) addDetails(disclaimer, QObject::tr("免責事項"), QString::fromUtf8(disclaimerFile.readAll()));

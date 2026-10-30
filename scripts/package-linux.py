@@ -171,6 +171,7 @@ def main():
         required.update({"libssl.so.3": "libssl3t64", "libcrypto.so.3": "libssl3t64"})
         licenses = stage / "licenses"
         licenses.mkdir()
+        shutil.copytree(ROOT / "licenses", licenses, dirs_exist_ok=True)
         docs = [Path("/usr/share/doc")]
         if prefix:
             docs.insert(0, prefix / "share/doc")
@@ -198,11 +199,13 @@ def main():
             "https://launchpad.net/ubuntu/+source/qt6-imageformats\n"
             "https://launchpad.net/ubuntu/+source/qtkeychain\n"
             "Libraries may be replaced with compatible builds. qtNorth source is in source/.\n")
-        for directory in ("src", "assets", "scripts", "packaging", "tests", "docs"):
+        for directory in ("src", "assets", "scripts", "packaging", "tests", "docs", "licenses"):
             shutil.copytree(ROOT / directory, stage / "source" / directory,
                             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         copy_file(ROOT / "DISCLAIMER.txt", stage / "DISCLAIMER.txt")
-        for filename in ("CMakeLists.txt", "README.md", "DISCLAIMER.txt", ".gitignore"):
+        copy_file(ROOT / "LICENSE", stage / "LICENSE")
+        copy_file(ROOT / "THIRD_PARTY_NOTICES.txt", stage / "THIRD_PARTY_NOTICES.txt")
+        for filename in ("CMakeLists.txt", "README.md", "DISCLAIMER.txt", "LICENSE", "THIRD_PARTY_NOTICES.txt", ".gitignore", ".gitattributes"):
             copy_file(ROOT / filename, stage / "source" / filename)
         maximum_glibc = (0, 0)
         for binary in [stage / "bin/qtNorth", *stage.glob("lib/*"), *stage.glob("plugins/*/*.so")]:

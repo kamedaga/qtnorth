@@ -98,6 +98,9 @@ try {
         if (Test-Path "$QtPath\licenses") { Copy-Item "$QtPath\licenses\*" "$package\licenses" -Recurse -Force }
         Copy-Item "$root\README.md" "$package\README-source.md" -Force
         Copy-Item "$root\DISCLAIMER.txt" "$package\DISCLAIMER.txt" -Force
+        Copy-Item "$root\LICENSE" "$package\LICENSE" -Force
+        Copy-Item "$root\THIRD_PARTY_NOTICES.txt" "$package\THIRD_PARTY_NOTICES.txt" -Force
+        Copy-Item "$root\licenses\*" "$package\licenses" -Recurse -Force
         if (Test-Path "$build\deps\vc_redist.x64.exe") {
             New-Item -ItemType Directory -Force "$package\runtime" | Out-Null
             Copy-Item "$build\deps\vc_redist.x64.exe" "$package\runtime" -Force

@@ -11,3 +11,4 @@ qtNorth for FreeBSD amd64
 
 認証情報の保存にはD-Busと、起動・解除済みのキーリングまたはKWalletが必要です。
 ソースとビルド手順はsource/にあります。
+ライセンスはLICENSE（0BSD）とTHIRD_PARTY_NOTICES.txt、全文はlicenses/を参照してください。
