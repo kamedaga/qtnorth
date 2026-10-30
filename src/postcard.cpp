@@ -45,7 +45,9 @@ PostCard::PostCard(QJsonObject post, bool interactive, NorthApi *api, QWidget *p
     setProperty("scrollAnchor", true);
     setProperty("selected", false);
     setCursor(Qt::PointingHandCursor);
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    // Minimum treats the unconstrained size hint as a height floor. With
+    // width-dependent text/images that leaves unused space below the feed.
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
     auto *outer = new QVBoxLayout(this);
     outer->setContentsMargins(16, 12, 16, 12);
     outer->setSpacing(2);

@@ -753,6 +753,56 @@ private slots:
         QCOMPARE(timeline->findChildren<PostCard *>().size(), 1);
         QCOMPARE(timeline->findChild<PostCard *>()->post().value("id").toString(), "ranked");
     }
+    void timelineHasNoScrollableBlankTailAfterContentResizes() {
+        Server server; int moreRequests = 0;
+        server.handler = [&](Request request) {
+            if (request.url.path() == "/2/users/me") return Response{200, {{"data", QJsonObject{{"id", "me"}, {"handle", "me"}}}}};
+            if (request.url.path() == "/media/photo.png") return Response{200, {}, {{"Content-Type", "image/png"}}, 0, png()};
+            QJsonArray items;
+            const bool more = QUrlQuery(request.url).hasQueryItem("cursor");
+            if (more) ++moreRequests;
+            for (int i = 0; i < (more ? 1 : 30); ++i) {
+                auto item = post(QString::number(more ? 30 : i));
+                item.insert("text", QString("A long line that wraps across the width of the post. ").repeated(15));
+                if (i % 3) item.remove("media");
+                items.append(item);
+            }
+            return Response{200, {{"data", QJsonObject{{"items", items}, {"nextCursor", more ? QJsonValue(QJsonValue::Null) : QJsonValue("next")}}}}};
+        };
+        auto *preferences = Preferences::instance(); const bool folded = preferences->foldLongPosts();
+        const auto restore = qScopeGuard([&] { preferences->setFoldLongPosts(folded); });
+        preferences->setFoldLongPosts(false);
+        MemoryStore store; MainWindow window(nullptr, server.base(), &store); window.show();
+        QTRY_VERIFY(window.findChild<QTabWidget *>("loginMethods")->isEnabled()); submitToken(window);
+        auto *timeline = window.findChild<QScrollArea *>("timelineScroll");
+        QTRY_COMPARE(timeline->findChildren<PostCard *>().size(), 30);
+        QTest::qWait(100);
+        auto *bar = timeline->verticalScrollBar();
+        for (const bool fold : {false, true}) {
+            preferences->setFoldLongPosts(fold);
+            for (int width : {940, 1550, 1100}) {
+                window.resize(width, 700); QTest::qWait(100);
+                auto cards = timeline->findChildren<PostCard *>();
+                int bottom = 0;
+                for (auto *card : cards) bottom = std::max(bottom, card->mapTo(timeline->widget(), QPoint(0, card->height())).y());
+                const int blank = timeline->widget()->height() - bottom;
+                QVERIFY2(blank <= 2, qPrintable(QString("Scrollable blank tail: %1px; canvas=%2, last post bottom=%3, width=%4, folded=%5")
+                    .arg(blank).arg(timeline->widget()->height()).arg(bottom).arg(width).arg(fold)));
+            }
+        }
+        auto cards = timeline->findChildren<PostCard *>(); int bottom = 0;
+        for (auto *card : cards) bottom = std::max(bottom, card->mapTo(timeline->widget(), QPoint(0, card->height())).y());
+        bar->setValue(bottom - timeline->viewport()->height());
+        QTRY_COMPARE(moreRequests, 1);
+        QTRY_COMPARE(timeline->findChildren<PostCard *>().size(), 31);
+        QTest::qWait(100);
+        bottom = 0;
+        for (auto *card : timeline->findChildren<PostCard *>()) {
+            bottom = std::max(bottom, card->mapTo(timeline->widget(), QPoint(0, card->height())).y());
+            QVERIFY(card->height() >= card->heightForWidth(card->width()));
+        }
+        QVERIFY(timeline->widget()->height() - bottom <= 2);
+    }
     void authenticatedPostNavigationAndMessageRetry() {
         Server server;
         int sends = 0;
