@@ -97,6 +97,7 @@ try {
         Copy-Item "$source\COPYING" "$package\licenses\QtKeychain.txt" -Force
         if (Test-Path "$QtPath\licenses") { Copy-Item "$QtPath\licenses\*" "$package\licenses" -Recurse -Force }
         Copy-Item "$root\README.md" "$package\README-source.md" -Force
+        Copy-Item "$root\DISCLAIMER.txt" "$package\DISCLAIMER.txt" -Force
         if (Test-Path "$build\deps\vc_redist.x64.exe") {
             New-Item -ItemType Directory -Force "$package\runtime" | Out-Null
             Copy-Item "$build\deps\vc_redist.x64.exe" "$package\runtime" -Force

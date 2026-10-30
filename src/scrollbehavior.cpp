@@ -3,9 +3,70 @@
 #include <QApplication>
 #include <QEvent>
 #include <QScrollBar>
+#include <QScrollArea>
+#include <QWidget>
 #include <QWheelEvent>
 #include <algorithm>
 #include <cmath>
+#include <limits>
+
+namespace {
+class AnchorKeeper : public QObject {
+public:
+    explicit AnchorKeeper(QScrollArea *area) : QObject(area), m_area(area) {
+        setObjectName("scrollAnchorKeeper");
+        m_timer.setSingleShot(true);
+        connect(&m_timer, &QTimer::timeout, this, [this] {
+            if (!m_anchor || !m_area->isVisible() || !m_anchor->isVisible()) { release(); return; }
+            const int y = m_anchor->mapTo(m_area->widget(), QPoint()).y();
+            SmoothScroll::shiftFor(m_area, y - m_y); m_y = y;
+            if (--m_passes > 0) m_timer.start(0); else release();
+        });
+    }
+    bool capture() {
+        if (m_anchor) return true;
+        if (!m_area->widget() || !m_area->isVisible()) return false;
+        const int top = m_area->verticalScrollBar()->value();
+        int first = std::numeric_limits<int>::max();
+        for (auto *row : m_area->widget()->findChildren<QWidget *>()) {
+            if (!row->property("scrollAnchor").toBool() || !row->isVisible()) continue;
+            const int y = row->mapTo(m_area->widget(), QPoint()).y();
+            if (y + row->height() <= top || y >= top + m_area->viewport()->height() || y >= first) continue;
+            first = y; m_anchor = row; m_y = y;
+        }
+        if (m_anchor) {
+            m_restoreUpdates = m_area->viewport()->updatesEnabled();
+            if (m_restoreUpdates) m_area->viewport()->setUpdatesEnabled(false);
+        }
+        return !m_anchor.isNull();
+    }
+    void restoreSoon() { m_passes = 3; m_timer.start(0); }
+private:
+    void release() {
+        m_anchor.clear();
+        if (m_restoreUpdates) m_area->viewport()->setUpdatesEnabled(true);
+        m_restoreUpdates = false;
+    }
+    QScrollArea *m_area;
+    QPointer<QWidget> m_anchor;
+    QTimer m_timer;
+    int m_y = 0, m_passes = 0;
+    bool m_restoreUpdates = false;
+};
+}
+
+ScrollAnchorGuard::ScrollAnchorGuard(QScrollArea *area, bool enabled)
+{
+    if (!enabled || !area) return;
+    auto *object = area->findChild<QObject *>("scrollAnchorKeeper", Qt::FindDirectChildrenOnly);
+    auto *keeper = object ? static_cast<AnchorKeeper *>(object) : new AnchorKeeper(area);
+    if (keeper->capture()) m_keeper = keeper;
+}
+
+ScrollAnchorGuard::~ScrollAnchorGuard()
+{
+    if (m_keeper) static_cast<AnchorKeeper *>(m_keeper.data())->restoreSoon();
+}
 
 void HorizontalWheelTabBar::wheelEvent(QWheelEvent *event)
 {
@@ -66,6 +127,26 @@ void SmoothScroll::stopFor(QAbstractScrollArea *area)
     if (auto *scroll = area->findChild<SmoothScroll *>("smoothScroll", Qt::FindDirectChildrenOnly)) scroll->stop();
 }
 
+void SmoothScroll::shiftFor(QAbstractScrollArea *area, int delta)
+{
+    if (!delta) return;
+    auto *bar = area->verticalScrollBar();
+    auto *scroll = area->findChild<SmoothScroll *>("smoothScroll", Qt::FindDirectChildrenOnly);
+    if (!scroll) { bar->setValue(bar->value() + delta); return; }
+    const bool moving = scroll->m_animation.state() == QAbstractAnimation::Running;
+    const int remaining = std::max(1, scroll->m_animation.duration() - scroll->m_animation.currentTime());
+    const qreal target = scroll->m_target + delta;
+    scroll->m_animation.stop();
+    bar->setValue(bar->value() + delta);
+    scroll->m_target = moving ? std::clamp(target, qreal(bar->minimum()), qreal(bar->maximum())) : bar->value();
+    if (moving) {
+        scroll->m_animation.setDuration(remaining);
+        scroll->m_animation.setStartValue(bar->value());
+        scroll->m_animation.setEndValue(int(std::round(scroll->m_target)));
+        scroll->m_animation.start();
+    }
+}
+
 bool SmoothScroll::eventFilter(QObject *, QEvent *event)
 {
     if (event->type() == QEvent::Hide || event->type() == QEvent::KeyPress) { stop(); return false; }
@@ -89,6 +170,7 @@ bool SmoothScroll::eventFilter(QObject *, QEvent *event)
     m_animation.stop();
     m_animation.setStartValue(m_bar->value());
     m_animation.setEndValue(int(std::round(m_target)));
+    m_animation.setDuration(170);
     m_animation.start();
     wheel->accept();
     return true;

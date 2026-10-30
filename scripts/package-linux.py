@@ -201,7 +201,8 @@ def main():
         for directory in ("src", "assets", "scripts", "packaging", "tests", "docs"):
             shutil.copytree(ROOT / directory, stage / "source" / directory,
                             ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        for filename in ("CMakeLists.txt", "README.md", ".gitignore"):
+        copy_file(ROOT / "DISCLAIMER.txt", stage / "DISCLAIMER.txt")
+        for filename in ("CMakeLists.txt", "README.md", "DISCLAIMER.txt", ".gitignore"):
             copy_file(ROOT / filename, stage / "source" / filename)
         maximum_glibc = (0, 0)
         for binary in [stage / "bin/qtNorth", *stage.glob("lib/*"), *stage.glob("plugins/*/*.so")]:

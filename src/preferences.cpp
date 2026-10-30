@@ -3,7 +3,7 @@
 #include <QSettings>
 
 namespace {
-bool validInterval(int seconds) { return seconds == 0 || seconds == 60 || seconds == 120 || seconds == 300; }
+bool validInterval(int seconds) { return seconds == 0 || seconds == 15 || seconds == 30 || seconds == 60 || seconds == 120 || seconds == 300; }
 }
 
 Preferences *Preferences::instance()
@@ -14,8 +14,9 @@ Preferences *Preferences::instance()
 
 int Preferences::notificationInterval() const
 {
-    const auto seconds = QSettings().value("notifications/pollIntervalSeconds", 60).toInt();
-    return validInterval(seconds) ? seconds : 60;
+    bool ok = false;
+    const auto seconds = QSettings().value("notifications/pollIntervalSeconds", 30).toInt(&ok);
+    return ok && validInterval(seconds) ? seconds : 30;
 }
 
 void Preferences::setNotificationInterval(int seconds)

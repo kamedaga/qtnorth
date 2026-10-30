@@ -3,6 +3,7 @@
 #include "post.h"
 #include "preferences.h"
 #include "remoteimage.h"
+#include "scrollbehavior.h"
 #include <QAbstractScrollArea>
 #include <QApplication>
 #include <QDesktopServices>
@@ -15,6 +16,7 @@
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QScrollBar>
+#include <QScrollArea>
 #include <QShowEvent>
 #include <QTextDocumentFragment>
 #include <QTimer>
@@ -360,6 +362,9 @@ void LinkPreview::maybeLoad()
 
 void LinkPreview::render(const LinkPreviewData &data)
 {
+    QScrollArea *area = nullptr;
+    for (auto *p = parentWidget(); p; p = p->parentWidget()) if ((area = qobject_cast<QScrollArea *>(p))) break;
+    const ScrollAnchorGuard keepPosition(area);
     empty(m_layout);
     const bool youTube = data.youTube || property("youTube").toBool();
     if (data.xPost) {

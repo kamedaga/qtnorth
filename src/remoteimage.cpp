@@ -1,6 +1,7 @@
 #include "remoteimage.h"
 #include "northapi.h"
 #include "windowchrome.h"
+#include "scrollbehavior.h"
 #include <QBuffer>
 #include <QDialog>
 #include <QFile>
@@ -9,6 +10,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QScreen>
+#include <QScrollArea>
 #include <QShowEvent>
 #include <QVBoxLayout>
 #include <algorithm>
@@ -85,6 +87,10 @@ void RemoteImage::load()
 
 void RemoteImage::decode(const QByteArray &bytes)
 {
+    QScrollArea *area = nullptr;
+    if (!m_expectedSize.isValid() && minimumHeight() != maximumHeight())
+        for (auto *p = parentWidget(); p; p = p->parentWidget()) if ((area = qobject_cast<QScrollArea *>(p))) break;
+    const ScrollAnchorGuard keepPosition(area);
     QBuffer buffer;
     buffer.setData(bytes);
     buffer.open(QIODevice::ReadOnly);

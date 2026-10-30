@@ -111,6 +111,36 @@ private slots:
         QTest::qWait(220);
         QCOMPARE(f.bar()->value(), 500);
     }
+    void appendedRowsKeepTheVisibleAnchorAndWheelMomentum() {
+        QScrollArea area; area.setWidgetResizable(true); area.resize(450, 300);
+        auto *canvas = new QWidget; auto *layout = new QVBoxLayout(canvas);
+        layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(0);
+        auto *header = new QWidget; header->setFixedHeight(64); layout->addWidget(header);
+        QList<QWidget *> rows;
+        auto append = [&] { auto *row = new QWidget; row->setFixedHeight(100); row->setProperty("scrollAnchor", true); layout->addWidget(row); rows.append(row); };
+        for (int i = 0; i < 20; ++i) append();
+        area.setWidget(canvas); SmoothScroll smooth(&area); area.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&area));
+        auto *bar = area.verticalScrollBar(); QTRY_VERIFY(bar->maximum() > 1500); bar->setValue(650);
+        const int before = rows[6]->mapTo(area.viewport(), QPoint()).y(); const int maximum = bar->maximum();
+        {
+            const ScrollAnchorGuard keep(&area);
+            header->setFixedHeight(79);
+            for (int i = 0; i < 15; ++i) append();
+        }
+        QTRY_VERIFY(bar->maximum() > maximum + 1400); QTest::qWait(30);
+        QCOMPARE(rows[6]->mapTo(area.viewport(), QPoint()).y(), before);
+        QCOMPARE(bar->value(), 665);
+        QVERIFY(area.viewport()->updatesEnabled());
+        const int step = std::max(1, QApplication::wheelScrollLines()) * 20;
+        wheel(area.viewport(), -120); QTest::qWait(30);
+        {
+            const ScrollAnchorGuard keep(&area); header->setFixedHeight(94); append();
+        }
+        QTest::qWait(220);
+        QCOMPARE(bar->value(), 665 + step + 15);
+        QCOMPARE(rows[6]->mapTo(area.viewport(), QPoint()).y(), before - step);
+    }
     void bottomLoadingIsSingleFlightAndStopsAtEnd() {
         ScrollFixture f;
         EdgeLoader loader(&f.area);

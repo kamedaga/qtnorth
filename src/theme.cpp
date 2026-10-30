@@ -31,9 +31,10 @@ QPushButton:hover { background: {hover}; }
 QPushButton:pressed { background: {raised}; }
 QPushButton:disabled { color: {muted}; background: {surface}; }
 QPushButton:focus, QLineEdit:focus, QPlainTextEdit:focus { border: 1px solid {accent}; }
-QPushButton#primary { color: white; background: {primary}; border-color: {primary}; font-weight: 600; }
-QPushButton#primary:hover { background: {primaryHover}; }
-QPushButton#primary:disabled { color: {muted}; background: {raised}; border-color: {border}; }
+QPushButton#primary, QPushButton#composeSend, QPushButton#pollVote { color: white; background: {primary}; border-color: {primary}; font-weight: 600; }
+QPushButton#primary:hover, QPushButton#composeSend:hover, QPushButton#pollVote:hover { background: {primaryHover}; }
+QPushButton#primary:disabled, QPushButton#composeSend:disabled, QPushButton#pollVote:disabled { color: {muted}; background: {raised}; border-color: {border}; }
+QPushButton#followButton { padding: 4px 8px; border-radius: 12px; font-size: 11px; }
 QPushButton#nav { border: none; background: transparent; text-align: left; padding: 9px 12px; }
 QPushButton#nav:hover, QPushButton#tool:hover { background: {hover}; }
 QPushButton#nav:checked { background: {raised}; font-weight: 600; }

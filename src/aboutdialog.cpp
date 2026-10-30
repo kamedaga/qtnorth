@@ -7,6 +7,7 @@
 #include <QDesktopServices>
 #include <QDialog>
 #include <QFrame>
+#include <QFile>
 #include <QLabel>
 #include <QPushButton>
 #include <QScrollArea>
@@ -81,18 +82,25 @@ void showAboutDialog(QWidget *parent)
     auto *libraries = row(details, QObject::tr("使用ライブラリー"), "chevron");
     separator = new QFrame; separator->setObjectName("aboutSeparator"); separator->setFixedHeight(1); details->addWidget(separator);
     auto *system = row(details, QObject::tr("システム情報"), "chevron");
+    separator = new QFrame; separator->setObjectName("aboutSeparator"); separator->setFixedHeight(1); details->addWidget(separator);
+    auto *disclaimer = row(details, QObject::tr("免責事項"), "chevron"); disclaimer->setObjectName("aboutDisclaimer");
     layout->addStretch();
     pages->addWidget(main);
     auto addDetails = [pages, back](QPushButton *button, const QString &heading, const QString &body) {
         auto *page = new QWidget; page->setObjectName("aboutPage");
         auto *content = new QVBoxLayout(page); content->setContentsMargins(18, 18, 18, 18); content->setSpacing(20);
         content->addWidget(text(heading, "title"));
-        auto *label = text(body); label->setTextInteractionFlags(Qt::TextSelectableByMouse); content->addWidget(label); content->addStretch();
+        auto *label = text(body); label->setTextInteractionFlags(Qt::TextSelectableByMouse); label->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+        auto *scroll = new QScrollArea; scroll->setFrameShape(QFrame::NoFrame); scroll->setWidgetResizable(true);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff); scroll->setWidget(label); content->addWidget(scroll, 1);
         pages->addWidget(page);
         QObject::connect(button, &QPushButton::clicked, pages, [pages, page, back] { pages->setCurrentWidget(page); back->show(); });
     };
     addDetails(libraries, QObject::tr("使用ライブラリー"), QObject::tr("Qt %1\nQtKeychain").arg(QString::fromLatin1(qVersion())));
     addDetails(system, QObject::tr("システム情報"), QString("qtNorth %1\nQt %2\n%3\n%4").arg(QStringLiteral(QTNORTH_VERSION), QString::fromLatin1(qVersion()), QSysInfo::prettyProductName(), QApplication::platformName()));
+    QFile disclaimerFile(":/DISCLAIMER.txt");
+    if (disclaimerFile.open(QIODevice::ReadOnly)) addDetails(disclaimer, QObject::tr("免責事項"), QString::fromUtf8(disclaimerFile.readAll()));
+    else disclaimer->setEnabled(false);
     QObject::connect(back, &QPushButton::clicked, pages, [pages, main, back] { pages->setCurrentWidget(main); back->hide(); });
     dialog->open();
 }

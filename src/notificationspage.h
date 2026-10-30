@@ -1,6 +1,7 @@
 #pragma once
 #include <QJsonObject>
 #include <QElapsedTimer>
+#include <QDeadlineTimer>
 #include <QPushButton>
 #include <QSet>
 #include <QTimer>
@@ -55,6 +56,7 @@ private:
     EdgeLoader *m_loader;
     QTimer m_poll;
     QElapsedTimer m_lastCount;
+    QDeadlineTimer m_retryDeadline;
     QSet<QString> m_seen;
     QString m_cursor;
     QByteArray m_markKey;

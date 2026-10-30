@@ -71,6 +71,32 @@ private slots:
         page.refreshUnreadCount();
         QTRY_COMPARE(updates.last()[0].toLongLong(), 2); QCOMPARE(counts, 2);
     }
+    void shortPollingRetriesAtTheSelectedIntervalAndPausesWhenInactive() {
+        auto *preferences = Preferences::instance(); const auto original = QSettings().value("notifications/pollIntervalSeconds");
+        const auto restore = qScopeGuard([original] {
+            if (original.isValid()) QSettings().setValue("notifications/pollIntervalSeconds", original);
+            else QSettings().remove("notifications/pollIntervalSeconds");
+        });
+        QSettings().remove("notifications/pollIntervalSeconds"); QCOMPARE(preferences->notificationInterval(), 30);
+        QSettings().setValue("notifications/pollIntervalSeconds", "invalid"); QCOMPARE(preferences->notificationInterval(), 30);
+        preferences->setNotificationInterval(15);
+        Server server; int counts = 0;
+        server.handler = [&](Request) { return ++counts == 1 ? Response{500, {{"error", "temporary"}}} : Response{200, {{"data", QJsonObject{{"count", 3}}}}}; };
+        NorthApi api(nullptr, server.base()); api.usePersonalToken("test-token");
+        NotificationsPage page(&api, [&api](const QJsonObject &p) { return new PostCard(p, false, &api); });
+        page.resize(600, 400); page.show(); page.activateWindow();
+        QVERIFY(QTest::qWaitForWindowExposed(&page)); QTRY_COMPARE(qApp->applicationState(), Qt::ApplicationActive);
+        page.startSession(); QTRY_COMPARE(counts, 1);
+        auto *timer = page.findChild<QTimer *>("notificationPollTimer"); QVERIFY(timer);
+        QTRY_VERIFY(timer->isActive()); QVERIFY(timer->remainingTime() > 10000 && timer->remainingTime() <= 15000);
+        for (int i = 0; i < 10; ++i) page.refreshUnreadCount(false);
+        QTest::qWait(30); QCOMPARE(counts, 1);
+        QTRY_COMPARE_WITH_TIMEOUT(counts, 2, 22000); QTRY_VERIFY(timer->isActive());
+        QVERIFY(QMetaObject::invokeMethod(qApp, "applicationStateChanged", Qt::DirectConnection, Q_ARG(Qt::ApplicationState, Qt::ApplicationInactive)));
+        QVERIFY(!timer->isActive());
+        QVERIFY(QMetaObject::invokeMethod(qApp, "applicationStateChanged", Qt::DirectConnection, Q_ARG(Qt::ApplicationState, Qt::ApplicationActive)));
+        QVERIFY(timer->isActive()); QCOMPARE(counts, 2);
+    }
     void manualPollingStillAllowsLoginAndExplicitRefreshAfterFailure() {
         auto *preferences = Preferences::instance(); const auto previous = preferences->notificationInterval();
         const auto restore = qScopeGuard([=] { preferences->setNotificationInterval(previous); });

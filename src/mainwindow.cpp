@@ -15,9 +15,11 @@
 #include "notificationspage.h"
 #include "reactionusers.h"
 #include "remoteimage.h"
+#include "userrelations.h"
 #include <QJsonDocument>
 #include <QApplication>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QClipboard>
 #include <QCloseEvent>
 #include <QDesktopServices>
@@ -132,6 +134,13 @@ MainWindow::MainWindow(QWidget *parent, const QUrl &apiBase, CredentialStore *st
     about->setObjectName("showAbout");
     help->addAction(tr("north APIドキュメント"), this, [] { QDesktopServices::openUrl(QUrl("https://api.north.rip/docs")); });
     m_status = label(tr("未接続"));
+    connect(UserRelations::forApi(&m_api), &UserRelations::failed, this, [this](const QString &handle, const QString &message) {
+        m_status->setText(tr("@%1: %2").arg(handle, message));
+    });
+    connect(&m_api, &NorthApi::pollUpdated, this, [this](const QString &id, const QJsonObject &poll) {
+        if (m_openPost.value("id").toString() == id) m_openPost.insert("poll", poll);
+        if (m_selected.value("id").toString() == id) m_selected.insert("poll", poll);
+    });
     statusBar()->setSizeGripEnabled(false);
     statusBar()->addWidget(m_status);
     connect(&m_api, &NorthApi::sessionExpired, this, [this](const QString &message) {
@@ -507,6 +516,7 @@ void MainWindow::loadPosts(bool more)
     if (more && !m_cursor.isEmpty()) query.addQueryItem("cursor", m_cursor);
     m_api.request(this, "GET", path, query, {}, [this, generation, more](ApiResult result) {
         if (generation != m_viewGeneration) return;
+        const ScrollAnchorGuard keepPosition(m_scroll, more);
         m_loading = false;
         m_refresh->setEnabled(true);
         if (!result.ok()) { m_timelineLoader->fail(result.retryAfter); showError(result.error); return; }
@@ -561,6 +571,7 @@ void MainWindow::inspect(const QJsonObject &post)
     auto *handle = button("@" + author.value("handle").toString(), {}, "authorHandle");
     for (auto *identity : {name, handle}) connect(identity, &QPushButton::clicked, this, [this, author] { openProfile(author.value("handle").toString()); });
     m_detailLayout->addWidget(name); m_detailLayout->addWidget(handle);
+    m_detailLayout->addWidget(new FollowButton(author, &m_api, {}, m_details));
     m_detailLayout->addSpacing(8);
     m_detailLayout->addWidget(postTimeLabel(post.value("createdAt").toString(), "yyyy/MM/dd HH:mm"));
     if (!post.value("source").toString().isEmpty()) {
@@ -638,6 +649,7 @@ void MainWindow::loadReplies(bool more)
     if (more && !m_replyCursor.isEmpty()) query.addQueryItem("cursor", m_replyCursor);
     m_api.request(this, "GET", path + "/conversation", query, {}, [this, generation, more, path](ApiResult result) {
         if (generation != m_postGeneration || !m_postPageVisible) return;
+        const ScrollAnchorGuard keepPosition(m_postScroll, more);
         m_loadingReplies = false;
         if (!result.ok()) {
             m_replyLoader->fail(result.retryAfter);
@@ -794,6 +806,7 @@ void MainWindow::connected()
             return;
         }
         m_me = r.data();
+        UserRelations::forApi(&m_api)->setViewer(m_me);
         m_verified = true;
         saveSession([this, attempt](bool saved) {
             if (attempt != m_loginAttempt || m_closing) return;
@@ -912,6 +925,7 @@ void MainWindow::compose(const QJsonObject &reply)
     if (!m_verified || !m_api.authenticated()) { if (m_shell->currentWidget() != m_loginPage) login(); return; }
     if (!m_api.allowsScope("posts.write")) { showError(tr("この認証には投稿の権限がありません。書き込みを許可して再ログインしてください。")); return; }
     auto *dialog = new QDialog(this);
+    dialog->setObjectName("composeDialog");
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->setWindowTitle(reply.isEmpty() ? tr("新規ポスト") : tr("返信"));
     dialog->resize(520, 355);
@@ -924,8 +938,25 @@ void MainWindow::compose(const QJsonObject &reply)
     layout->setSpacing(14);
     if (!reply.isEmpty()) layout->addWidget(label(tr("@%1 に返信").arg(reply.value("author").toObject().value("handle").toString()), "authorName"));
     auto *editor = new QPlainTextEdit;
+    editor->setObjectName("composeText");
     editor->setPlaceholderText(tr("本文"));
     layout->addWidget(editor);
+    auto *withPoll = new QCheckBox(tr("アンケート")); withPoll->setObjectName("composePoll"); layout->addWidget(withPoll);
+    withPoll->setToolTip(tr("選択肢は2〜4件、各25文字まで。重複する選択肢は使えません。期間は5分〜7日です"));
+    auto *pollOptions = new QWidget; auto *pollLayout = new QVBoxLayout(pollOptions);
+    pollLayout->setContentsMargins(0, 0, 0, 0); pollLayout->setSpacing(6);
+    QList<QLineEdit *> choices;
+    for (int i = 0; i < 4; ++i) {
+        auto *choice = new QLineEdit; choice->setObjectName(QString("pollOption%1Input").arg(i + 1)); choice->setMaxLength(25);
+        choice->setPlaceholderText(i < 2 ? tr("選択肢 %1").arg(i + 1) : tr("選択肢 %1（任意）").arg(i + 1));
+        choice->setAccessibleName(choice->placeholderText()); pollLayout->addWidget(choice); choices.append(choice);
+    }
+    auto *duration = new QComboBox; duration->setObjectName("pollDuration"); duration->setAccessibleName(tr("投票期間"));
+    for (const auto &entry : QList<QPair<QString, int>>{{tr("5分"), 5}, {tr("30分"), 30}, {tr("1時間"), 60}, {tr("6時間"), 360}, {tr("1日"), 1440}, {tr("3日"), 4320}, {tr("7日"), 10080}})
+        duration->addItem(entry.first, entry.second);
+    duration->setCurrentIndex(duration->findData(1440)); pollLayout->addWidget(duration);
+    pollOptions->hide(); layout->addWidget(pollOptions);
+    connect(withPoll, &QCheckBox::toggled, dialog, [dialog, pollOptions](bool enabled) { pollOptions->setVisible(enabled); dialog->resize(dialog->width(), enabled ? 580 : 355); });
     auto *error = label({}, "notice", true);
     error->hide();
     layout->addWidget(error);
@@ -933,34 +964,48 @@ void MainWindow::compose(const QJsonObject &reply)
     auto *count = label("0 / 280", "muted");
     auto *cancel = button(tr("キャンセル"));
     auto *send = button(reply.isEmpty() ? tr("投稿") : tr("返信"), {}, "primary");
+    send->setObjectName("composeSend");
     send->setEnabled(false);
     row->addWidget(count); row->addStretch(); row->addWidget(cancel); row->addWidget(send);
     layout->addLayout(row);
     connect(cancel, &QPushButton::clicked, dialog, &QDialog::reject);
-    connect(editor, &QPlainTextEdit::textChanged, dialog, [editor, count, send] {
+    auto sending = std::make_shared<bool>(false);
+    auto validate = [editor, count, send, choices, withPoll, sending] {
         const auto text = editor->toPlainText();
         const int weight = North::textWeight(text);
         count->setText(QString::number(weight) + " / 280");
         count->setStyleSheet(weight > 280 ? "color:#c45b57;" : "color:#919191;");
-        send->setEnabled(!text.trimmed().isEmpty() && weight <= 280);
-    });
-    // Reuse the operation key after an uncertain failure, unless the text changes.
+        int options = 0; QSet<QString> labels;
+        for (auto *choice : choices) if (!choice->text().trimmed().isEmpty()) { ++options; labels.insert(choice->text().trimmed().toLower()); }
+        const bool validPoll = !withPoll->isChecked() || (options >= 2 && labels.size() == options && !choices[0]->text().trimmed().isEmpty() && !choices[1]->text().trimmed().isEmpty());
+        send->setEnabled(!*sending && !text.trimmed().isEmpty() && weight <= 280 && validPoll);
+    };
+    connect(editor, &QPlainTextEdit::textChanged, dialog, validate);
+    connect(withPoll, &QCheckBox::toggled, dialog, validate);
+    for (auto *choice : choices) connect(choice, &QLineEdit::textChanged, dialog, validate);
+    // Reuse the key for identical retries, including poll choices and duration.
     auto key = std::make_shared<QByteArray>(NorthApi::newIdempotencyKey());
-    auto lastText = std::make_shared<QString>();
+    auto lastBody = std::make_shared<QByteArray>();
     const QString composeView = m_view;
-    connect(send, &QPushButton::clicked, dialog, [this, dialog, editor, error, send, reply, key, lastText, composeView] {
+    connect(send, &QPushButton::clicked, dialog, [this, dialog, editor, error, send, reply, key, lastBody, composeView, choices, withPoll, duration, pollOptions, sending, validate] {
         const QString text = editor->toPlainText();
-        if (text != *lastText && !lastText->isEmpty()) *key = NorthApi::newIdempotencyKey();
-        *lastText = text;
         QJsonObject body{{"text", text}};
         if (!reply.isEmpty()) body.insert("reply", QJsonObject{{"in_reply_to_tweet_id", reply.value("id")}});
+        if (withPoll->isChecked()) {
+            QJsonArray options; for (auto *choice : choices) if (!choice->text().trimmed().isEmpty()) options.append(choice->text().trimmed());
+            body.insert("poll", QJsonObject{{"options", options}, {"durationMinutes", duration->currentData().toInt()}});
+        }
+        const auto payload = QJsonDocument(body).toJson(QJsonDocument::Compact);
+        if (!lastBody->isEmpty() && payload != *lastBody) *key = NorthApi::newIdempotencyKey();
+        *lastBody = payload; *sending = true;
         send->setEnabled(false);
         editor->setReadOnly(true);
+        pollOptions->setEnabled(false); withPoll->setEnabled(false);
         error->hide();
-        m_api.request(dialog, "POST", "/2/tweets", {}, body, [this, dialog, editor, error, send, composeView](ApiResult r) {
+        m_api.request(dialog, "POST", "/2/tweets", {}, body, [this, dialog, editor, error, composeView, pollOptions, withPoll, sending, validate](ApiResult r) {
             if (!r.ok()) {
                 error->setText(r.error + tr("\n結果が不明な場合は、同じ本文で再試行するかnorthで投稿を確認してください。"));
-                error->show(); send->setEnabled(true); editor->setReadOnly(false); return;
+                *sending = false; error->show(); editor->setReadOnly(false); pollOptions->setEnabled(true); withPoll->setEnabled(true); validate(); return;
             }
             dialog->accept();
             m_status->setText(tr("ポストしました"));

@@ -5,6 +5,9 @@
 #include "posttext.h"
 #include "linkpreview.h"
 #include "remoteimage.h"
+#include "pollwidget.h"
+#include "northapi.h"
+#include "userrelations.h"
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -39,6 +42,7 @@ PostCard::PostCard(QJsonObject post, bool interactive, NorthApi *api, QWidget *p
     : QFrame(parent), m_post(North::displayedPost(post))
 {
     setObjectName("postCard");
+    setProperty("scrollAnchor", true);
     setProperty("selected", false);
     setCursor(Qt::PointingHandCursor);
     setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
@@ -98,12 +102,22 @@ PostCard::PostCard(QJsonObject post, bool interactive, NorthApi *api, QWidget *p
     }
     identity->addStretch(1);
     head->addLayout(identity, 1);
+    if (api) head->addWidget(new FollowButton(author, api, {}, this), 0, Qt::AlignTop);
     auto *time = postTimeLabel(m_post.value("createdAt").toString());
     head->addWidget(time, 0, Qt::AlignTop);
     layout->addLayout(head);
     addText(layout, m_post, api);
     const bool hidden = !m_post.value("hiddenReason").toString().isEmpty()
         || m_post.value("deleted").toBool() || m_post.value("unavailable").toBool();
+    if (!hidden && m_post.value("poll").isObject())
+        layout->addWidget(new PollWidget(m_post.value("id").toString(), m_post.value("poll").toObject(), interactive, api));
+    if (api) connect(api, &NorthApi::pollUpdated, this, [this](const QString &id, const QJsonObject &poll) {
+        if (m_post.value("id").toString() == id) m_post.insert("poll", poll);
+        auto quote = m_post.value("quoted").toObject();
+        if (quote.value("id").toString() == id) { quote.insert("poll", poll); m_post.insert("quoted", quote); }
+        for (auto it = m_clickTargets.begin(); it != m_clickTargets.end(); ++it)
+            if (it.value().value("id").toString() == id) it.value().insert("poll", poll);
+    });
     if (!hidden && m_post.value("quoted").isObject()) {
         const auto quoted = m_post.value("quoted").toObject();
         auto *quoteFrame = new QFrame; quoteFrame->setObjectName("quote");
@@ -113,6 +127,8 @@ PostCard::PostCard(QJsonObject post, bool interactive, NorthApi *api, QWidget *p
         connect(quotedName, &QPushButton::clicked, this, [this, quoted] { emit profileRequested(quoted.value("author").toObject().value("handle").toString()); });
         quoteLayout->addWidget(quotedName);
         addText(quoteLayout, quoted, api);
+        if (quoted.value("hiddenReason").toString().isEmpty() && !quoted.value("unavailable").toBool() && !quoted.value("deleted").toBool() && quoted.value("poll").isObject())
+            quoteLayout->addWidget(new PollWidget(quoted.value("id").toString(), quoted.value("poll").toObject(), interactive, api));
         layout->addWidget(quoteFrame);
         if (quoted.value("hiddenReason").toString().isEmpty() && !quoted.value("unavailable").toBool() && !quoted.value("deleted").toBool()) addMedia(layout, quoted, api);
     }

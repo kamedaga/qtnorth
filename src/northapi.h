@@ -51,7 +51,13 @@ public:
     void clearCaches();
     static QByteArray newIdempotencyKey();
     void fetchMedia(QObject *context, const QUrl &url, MediaCallback callback);
+    void votePoll(const QString &postId, const QString &optionId);
+    void refreshPoll(const QString &postId);
+    bool pollBusy(const QString &postId) const { return m_pollVotes.contains(postId); }
 signals:
+    void pollUpdated(QString postId, QJsonObject poll);
+    void pollBusyChanged(QString postId, bool busy);
+    void pollFailed(QString postId, QString message);
     void cachesCleared();
     void loggedOut();
     void deviceAuthorization(QString code, QUrl verificationUrl);
@@ -94,6 +100,9 @@ private:
     bool m_isOAuth = false;
     RefreshGuard m_refreshGuard;
     QSet<QString> m_scopes;
+    QSet<QString> m_pollVotes;
+    QSet<QString> m_pollReads;
+    QHash<QString, QPair<QString, QByteArray>> m_pollKeys;
     struct Pending {
         QPointer<QObject> context;
         std::function<void()> resume;

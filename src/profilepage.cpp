@@ -3,6 +3,7 @@
 #include "postcard.h"
 #include "remoteimage.h"
 #include "scrollbehavior.h"
+#include "userrelations.h"
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QFrame>
@@ -62,6 +63,23 @@ ProfilePage::ProfilePage(NorthApi *api, CardFactory factory, QWidget *parent)
     content->addWidget(items); content->addStretch();
     m_scroll->setWidget(canvas); layout->addWidget(m_scroll);
     connect(m_api, &NorthApi::loggedOut, this, &ProfilePage::clear);
+    auto *relations = UserRelations::forApi(api);
+    connect(relations, &UserRelations::changed, this, [this, relations](const QString &handle) {
+        if (handle.compare(m_handle, Qt::CaseInsensitive) != 0 || m_user.isEmpty()) return;
+        auto updated = m_user;
+        const auto state = relations->user(handle);
+        for (const auto &key : {"following", "followerCount", "followingCount", "protected"})
+            if (state.contains(key)) updated.insert(key, state.value(key));
+        if (updated == m_user) return;
+        const bool lostPrivateAccess = m_user.value("protected").toBool() && m_user.value("following").toBool()
+            && !updated.value("following").toBool() && m_user.value("id").toString() != m_selfId;
+        m_user = updated;
+        if (m_headerLayout->count()) { const ScrollAnchorGuard keepPosition(m_scroll); renderHeader(); }
+        if (lostPrivateAccess) {
+            ++m_listGeneration; m_loading = false; m_seen.clear(); m_cursor.clear(); m_loader->reset(); empty(m_items);
+            m_notice->setText(tr("このアカウントの一覧は非公開です")); m_notice->show();
+        }
+    });
     clear();
 }
 
@@ -84,12 +102,14 @@ void ProfilePage::openUser(QString handle, QString selfId, int position, int sec
     m_notice->setText(tr("読み込み中…")); m_notice->show();
     setPosition(0);
     const auto generation = m_generation;
-    m_api->request(this, "GET", "/2/users/" + QString::fromLatin1(QUrl::toPercentEncoding(handle)), {}, {}, [this, generation](ApiResult result) {
+    const auto relationVersion = UserRelations::forApi(m_api)->version(handle);
+    m_api->request(this, "GET", "/2/users/" + QString::fromLatin1(QUrl::toPercentEncoding(handle)), {}, {}, [this, generation, relationVersion](ApiResult result) {
         if (generation != m_generation) return;
         if (!result.ok() || result.data().value("handle").toString().compare(m_handle, Qt::CaseInsensitive) != 0) {
             m_notice->setText(result.error.isEmpty() ? tr("プロフィールを取得できませんでした") : result.error); return;
         }
         m_user = result.data();
+        UserRelations::forApi(m_api)->observe(m_user, true, relationVersion);
         renderHeader(); m_tabs->show(); emit titleChanged(m_user.value("name").toString());
         loadItems();
     }, {}, NorthApi::ReadPolicy::Cached);
@@ -129,6 +149,7 @@ void ProfilePage::renderHeader()
         auto *relation = label(relations.join(" · "), "profileRelation");
         relation->setWordWrap(false); relationRow->addWidget(relation);
     }
+    relationRow->addWidget(new FollowButton(m_user, m_api, m_selfId, info));
     relationRow->addStrut(36);
     body->addLayout(relationRow); body->addSpacing(12);
     auto name = m_user.value("name").toString();
@@ -180,13 +201,15 @@ void ProfilePage::loadItems(bool more)
 {
     if (m_user.isEmpty() || (more && (m_loading || m_cursor.isEmpty()))) return;
     if (!more) { ++m_listGeneration; m_loader->reset(); m_seen.clear(); empty(m_items); m_cursor.clear(); }
-    m_loading = true; m_loader->setLoading(); m_notice->setText(tr("読み込み中…")); m_notice->show();
+    m_loading = true; m_loader->setLoading();
+    if (!more) { m_notice->setText(tr("読み込み中…")); m_notice->show(); }
     const auto generation = m_generation, listGeneration = m_listGeneration;
     const QString suffix = section() == 1 ? "/following" : section() == 2 ? "/followers" : "/tweets";
     QUrlQuery query; if (more) query.addQueryItem("cursor", m_cursor);
     m_api->request(this, "GET", "/2/users/" + QString::fromLatin1(QUrl::toPercentEncoding(m_handle)) + suffix, query, {},
         [this, generation, listGeneration, more](ApiResult result) {
         if (generation != m_generation || listGeneration != m_listGeneration) return;
+        const ScrollAnchorGuard keepPosition(m_scroll, more);
         m_loading = false;
         if (!result.ok() || !result.data().value("items").isArray()) {
             m_loader->fail(result.retryAfter); m_notice->setText(result.error.isEmpty() ? tr("一覧を取得できませんでした") : result.error); return;
@@ -216,7 +239,7 @@ void ProfilePage::loadItems(bool more)
 
 void ProfilePage::appendUser(const QJsonObject &user)
 {
-    auto *row = new QFrame; row->setObjectName("userRow");
+    auto *row = new QFrame; row->setObjectName("userRow"); row->setProperty("scrollAnchor", true);
     auto *layout = new QHBoxLayout(row); layout->setContentsMargins(16, 12, 16, 12); layout->setSpacing(12);
     const auto handle = user.value("handle").toString();
     if (!user.value("avatarUrl").toString().isEmpty()) {
@@ -237,5 +260,5 @@ void ProfilePage::appendUser(const QJsonObject &user)
     handleButton->setCursor(Qt::PointingHandCursor);
     connect(handleButton, &QPushButton::clicked, this, [this, handle] { emit profileRequested(handle); }); identity->addWidget(handleButton);
     if (!user.value("bio").toString().isEmpty()) identity->addWidget(label(user.value("bio").toString()));
-    layout->addLayout(identity, 1); m_items->addWidget(row);
+    layout->addLayout(identity, 1); layout->addWidget(new FollowButton(user, m_api, m_selfId, row)); m_items->addWidget(row);
 }

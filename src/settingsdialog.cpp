@@ -84,6 +84,7 @@ void showSettingsDialog(QWidget *parent, NorthApi *api)
     notificationRow->addLayout(notificationLabels, 1);
     auto *interval = new QComboBox; interval->setObjectName("notificationInterval");
     interval->setAccessibleName(QObject::tr("通知の自動更新間隔")); interval->setMinimumWidth(140);
+    interval->addItem(QObject::tr("15秒ごと"), 15); interval->addItem(QObject::tr("30秒ごと"), 30);
     interval->addItem(QObject::tr("1分ごと"), 60); interval->addItem(QObject::tr("2分ごと"), 120);
     interval->addItem(QObject::tr("5分ごと"), 300); interval->addItem(QObject::tr("手動のみ"), 0);
     auto *arrow = new QLabel(interval); arrow->setAttribute(Qt::WA_TransparentForMouseEvents);

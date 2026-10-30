@@ -3,11 +3,23 @@
 #include <QElapsedTimer>
 #include <QObject>
 #include <QPropertyAnimation>
+#include <QPointer>
 #include <QSet>
 #include <QTimer>
 #include <QTabBar>
 class QAbstractScrollArea;
 class QScrollBar;
+class QScrollArea;
+
+// Keeps the visible row in place while a batch of rows changes the layout.
+class ScrollAnchorGuard {
+public:
+    explicit ScrollAnchorGuard(QScrollArea *area, bool enabled = true);
+    ~ScrollAnchorGuard();
+    Q_DISABLE_COPY(ScrollAnchorGuard)
+private:
+    QPointer<QObject> m_keeper;
+};
 
 class HorizontalWheelTabBar : public QTabBar {
 public:
@@ -26,6 +38,7 @@ public:
     explicit SmoothScroll(QAbstractScrollArea *area);
     void stop();
     static void stopFor(QAbstractScrollArea *area);
+    static void shiftFor(QAbstractScrollArea *area, int delta);
 protected:
     bool eventFilter(QObject *object, QEvent *event) override;
 private:

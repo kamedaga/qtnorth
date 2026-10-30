@@ -143,10 +143,57 @@ private slots:
         QTest::mouseClick(authorize, Qt::LeftButton);
         QTRY_COMPARE(server.requests.size(), 1);
         QCOMPARE(server.requests.first().url.path(), "/oauth/device/code");
-        QCOMPARE(server.requests.first().body.value("client_id").toString(), "cmvv11g6c009lgkrd3i2xtgsv");
+        QCOMPARE(server.requests.first().body.value("client_id").toString(), "cmvv27dcd00dlgkrdx8q6vnxi");
+        QVERIFY(server.requests.first().body.value("scope").toString().contains("polls.vote"));
+        QVERIFY(server.requests.first().body.value("scope").toString().contains("follows.write"));
         QVERIFY(!server.requests.first().headers.contains("authorization"));
         QTRY_VERIFY(methods->isEnabled());
         QCOMPARE(window.findChild<QStackedWidget *>("appPages")->currentWidget()->objectName(), "loginPage");
+    }
+    void pollComposerValidatesChoicesAndKeysTheWholePayload() {
+        Server server; QList<Request> posts;
+        server.handler = [&](Request r) {
+            if (r.url.path() == "/2/users/me") return Response{200, {{"data", QJsonObject{{"id", "me"}, {"handle", "me"}}}}};
+            if (r.url.path() == "/2/notifications/unread_count") return Response{200, {{"data", QJsonObject{{"count", 0}}}}};
+            if (r.method == "POST" && r.url.path() == "/2/tweets") {
+                posts.append(r); return posts.size() < 3 ? Response{500, {{"error", "temporary"}}, {}, 40} : Response{201, {{"data", QJsonObject{{"id", "created"}}}}};
+            }
+            return Response{200, {{"data", QJsonObject{{"items", QJsonArray{}}}}}};
+        };
+        MemoryStore store; MainWindow window(nullptr, server.base(), &store); window.show();
+        QTRY_VERIFY(window.findChild<QTabWidget *>("loginMethods")->isEnabled()); submitToken(window);
+        QTRY_VERIFY(window.findChild<QStackedWidget *>("appPages")->currentWidget()->objectName() != "loginPage");
+        QAction *compose = nullptr; for (auto *a : window.findChildren<QAction *>()) if (a->text() == "新規ポスト") compose = a;
+        QVERIFY(compose); compose->trigger();
+        auto *dialog = window.findChild<QDialog *>("composeDialog"); QVERIFY(dialog);
+        auto *editor = dialog->findChild<QPlainTextEdit *>("composeText"); auto *enabled = dialog->findChild<QCheckBox *>("composePoll");
+        auto *first = dialog->findChild<QLineEdit *>("pollOption1Input"); auto *second = dialog->findChild<QLineEdit *>("pollOption2Input");
+        auto *duration = dialog->findChild<QComboBox *>("pollDuration"); auto *send = dialog->findChild<QPushButton *>("composeSend");
+        enabled->setChecked(true); first->setText("A"); second->setText("a"); editor->setPlainText("どちらが好き？"); QVERIFY(!send->isEnabled());
+        first->setText("寿司"); second->setText("天ぷら"); duration->setCurrentIndex(duration->findData(5)); QVERIFY(send->isEnabled());
+        QTest::mouseClick(send, Qt::LeftButton); QVERIFY(!enabled->isEnabled());
+        QTRY_VERIFY(posts.size() == 1 && send->isEnabled());
+        QCOMPARE(posts[0].body.value("poll").toObject().value("durationMinutes").toInt(), 5);
+        QCOMPARE(posts[0].body.value("poll").toObject().value("options").toArray(), QJsonArray({"寿司", "天ぷら"}));
+        QTest::mouseClick(send, Qt::LeftButton); QTRY_VERIFY(posts.size() == 2 && send->isEnabled());
+        QCOMPARE(posts[0].headers.value("idempotency-key"), posts[1].headers.value("idempotency-key"));
+        duration->setCurrentIndex(duration->findData(30)); QTest::mouseClick(send, Qt::LeftButton);
+        QTRY_COMPARE(posts.size(), 3);
+        QVERIFY(posts[2].headers.value("idempotency-key") != posts[1].headers.value("idempotency-key"));
+        QTRY_VERIFY(!window.findChild<QDialog *>("composeDialog"));
+    }
+    void disclaimerIsReadableBeforeLogin() {
+        Server server; MemoryStore store;
+        MainWindow window(nullptr, server.base(), &store); window.show();
+        QTest::mouseClick(window.findChild<QPushButton *>("loginAbout"), Qt::LeftButton);
+        auto *dialog = window.findChild<QDialog *>("aboutDialog"); QVERIFY(dialog);
+        auto *button = dialog->findChild<QPushButton *>("aboutDisclaimer"); QVERIFY(button); QVERIFY(button->isEnabled());
+        QTest::mouseClick(button, Qt::LeftButton);
+        auto *page = dialog->findChild<QStackedWidget *>("aboutPages")->currentWidget();
+        QVERIFY(containsText(*page, "免責事項"));
+        bool found = false; for (auto *text : page->findChildren<QLabel *>()) if (text->text().contains("ご自身の判断と責任")) found = true;
+        QVERIFY(found); QCOMPARE(server.requests.size(), 0);
+        QTest::mouseClick(dialog->findChild<QPushButton *>("aboutClose"), Qt::LeftButton);
     }
     void storedLoginAutomaticallyResumesAndLogoutErases() {
         Server server;
@@ -679,9 +726,18 @@ private slots:
         bar->setValue(oldMaximum);
         QTRY_COMPARE(cursorRequests, 1);
         bar->setValue(oldMaximum - 2); bar->setValue(oldMaximum);
+        PostCard *visibleCard = nullptr;
+        int visibleY = timeline->viewport()->height();
+        for (auto *card : timeline->findChildren<PostCard *>()) {
+            const int y = card->mapTo(timeline->viewport(), QPoint()).y();
+            if (y + card->height() > 0 && y < visibleY) { visibleCard = card; visibleY = y; }
+        }
+        QVERIFY(visibleCard);
         QTRY_COMPARE(timeline->findChildren<PostCard *>().size(), 31);
         QCOMPARE(cursorRequests, 1);
-        QCOMPARE(bar->value(), oldMaximum);
+        QTest::qWait(30); // Allow the queued layout and anchor correction to settle.
+        QCOMPARE(visibleCard->mapTo(timeline->viewport(), QPoint()).y(), visibleY);
+        QVERIFY(timeline->viewport()->updatesEnabled());
         QCOMPARE(QUrlQuery(server.requests.last().url).queryItemValue("cursor", QUrl::FullyDecoded), "next+/=");
         bar->setValue(bar->maximum()); QTest::qWait(50);
         QCOMPARE(cursorRequests, 1);

@@ -104,6 +104,8 @@ NotificationsPage::NotificationsPage(NorthApi *api, CardFactory factory, QWidget
     auto *items = new QWidget; m_items = new QVBoxLayout(items); m_items->setContentsMargins(0, 0, 0, 0); m_items->setSpacing(0);
     content->addWidget(items); content->addStretch(); m_scroll->setWidget(canvas); layout->addWidget(m_scroll, 1);
     m_poll.setSingleShot(true);
+    m_poll.setParent(this); m_poll.setObjectName("notificationPollTimer");
+    m_poll.setTimerType(Qt::PreciseTimer);
     connect(&m_poll, &QTimer::timeout, this, [this] {
         if (window()->isMinimized()) scheduleCountPoll(); else refreshUnreadCount(false);
     });
@@ -125,6 +127,7 @@ void NotificationsPage::clear()
     ++m_generation; ++m_listGeneration; ++m_countVersion;
     m_poll.stop(); m_session = false; m_denied = false; m_loading = false; m_loaded = false;
     m_lastCount.invalidate();
+    m_retryDeadline = QDeadlineTimer(0);
     m_countLoading = false; m_countAgain = false; m_marking = false; m_anyUnread = false; m_failures = 0;
     m_unread = 0; m_cursor.clear(); m_markKey.clear(); m_seen.clear(); m_loader->reset();
     empty(m_items); showNotice({}); m_new->hide(); m_login->hide(); m_markRead->hide();
@@ -160,6 +163,9 @@ void NotificationsPage::refreshUnreadCount(bool force)
     if (!m_session || m_denied || !m_api->authenticated()) return;
     const int interval = Preferences::instance()->notificationInterval() * 1000;
     if (!force && interval == 0) return;
+    if (!force && !m_retryDeadline.hasExpired()) {
+        scheduleCountPoll(int(m_retryDeadline.remainingTime())); return;
+    }
     if (m_countLoading || m_marking) {
         // Only a write requires another count after the current request.
         if (m_marking || m_countRequestVersion != m_countVersion) m_countAgain = true;
@@ -180,7 +186,7 @@ void NotificationsPage::refreshUnreadCount(bool force)
             if (result.ok() && value.isDouble() && count >= 0) {
                 const bool hadCount = m_lastCount.isValid();
                 const auto previous = m_unread; m_unread = count; m_failures = 0;
-                m_lastCount.start();
+                m_lastCount.start(); m_retryDeadline = QDeadlineTimer(0);
                 emit unreadCountChanged(count); updateControls();
                 if (hadCount && count != previous && m_loaded) {
                     if (isVisible() && m_scroll->verticalScrollBar()->value() == 0 && !m_loading) loadItems();
@@ -192,8 +198,10 @@ void NotificationsPage::refreshUnreadCount(bool force)
                 showNotice(tr("通知の権限が必要です。再ログインしてください"));
             } else if (result.status != 401 && result.status != 404) {
                 ++m_failures;
-                const int seconds = std::clamp(std::max(result.retryAfter, std::min(300, 60 * (1 << std::min(m_failures, 3)))), 60, 86400);
-                scheduleCountPoll(std::max(seconds, Preferences::instance()->notificationInterval()) * 1000);
+                const int base = std::max(15, Preferences::instance()->notificationInterval());
+                const int seconds = std::clamp(std::max(result.retryAfter, std::min(300, base * (1 << std::min(m_failures - 1, 4)))), 15, 86400);
+                m_retryDeadline = QDeadlineTimer(seconds * 1000);
+                scheduleCountPoll(seconds * 1000);
             }
         }
         if (m_countAgain && !m_marking && !m_denied) refreshUnreadCount();
@@ -216,12 +224,13 @@ void NotificationsPage::loadItems(bool more)
         ++m_listGeneration; m_loader->reset(); m_seen.clear(); m_cursor.clear(); m_anyUnread = false; m_loaded = false;
         empty(m_items); m_new->hide(); SmoothScroll::stopFor(m_scroll); m_scroll->verticalScrollBar()->setValue(0);
     }
-    m_loading = true; m_loader->setLoading(); showNotice(tr("読み込み中…"));
+    m_loading = true; m_loader->setLoading(); if (!more) showNotice(tr("読み込み中…"));
     const auto generation = m_generation, listGeneration = m_listGeneration;
     QUrlQuery query; const QStringList tabs{"all", "verified", "mentions"}; query.addQueryItem("tab", tabs[m_tabs->currentIndex()]);
     if (more) query.addQueryItem("cursor", m_cursor);
-    m_api->request(this, "GET", "/2/notifications", query, {}, [this, generation, listGeneration](ApiResult result) {
+    m_api->request(this, "GET", "/2/notifications", query, {}, [this, generation, listGeneration, more](ApiResult result) {
         if (generation != m_generation || listGeneration != m_listGeneration) return;
+        const ScrollAnchorGuard keepPosition(m_scroll, more);
         m_loading = false;
         if (!result.ok() || !result.data().value("items").isArray()) {
             m_loader->fail(result.retryAfter); showNotice(result.error.isEmpty() ? tr("通知を取得できませんでした") : result.error);
@@ -246,6 +255,7 @@ void NotificationsPage::appendNotification(const QJsonObject &notification)
     const auto tweet = notification.value("tweet").toObject();
     const bool singlePost = !tweet.value("id").toString().isEmpty() && notification.value("groupCount").toInt(1) <= 1 && notification.value("targetCount").toInt(1) <= 1;
     auto *row = new NotificationRow; row->setObjectName("notificationRow");
+    row->setProperty("scrollAnchor", true);
     row->setProperty("unread", !notification.value("read").toBool()); row->setProperty("notificationId", notification.value("id").toString());
     if (singlePost) row->open = [this, tweet] { emit postRequested(tweet); };
     else if (kind == "FOLLOW" && !actors.isEmpty()) {

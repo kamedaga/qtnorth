@@ -22,6 +22,41 @@ QByteArray NorthApi::newIdempotencyKey()
     return QUuid::createUuid().toString(QUuid::WithoutBraces).toLatin1();
 }
 
+void NorthApi::votePoll(const QString &postId, const QString &optionId)
+{
+    if (!allowsScope("polls.vote") || postId.isEmpty() || optionId.isEmpty()) {
+        emit pollFailed(postId, tr("投票の権限が必要です。書き込みを許可してOAuthで再ログインしてください")); return;
+    }
+    if (m_pollVotes.contains(postId)) return;
+    auto &operation = m_pollKeys[postId];
+    if (operation.first != optionId || operation.second.isEmpty()) operation = {optionId, newIdempotencyKey()};
+    const auto key = operation.second; const auto generation = m_generation;
+    m_pollVotes.insert(postId); emit pollBusyChanged(postId, true);
+    request(this, "POST", "/2/tweets/" + QString::fromLatin1(QUrl::toPercentEncoding(postId)) + "/poll/vote", {}, {{"optionId", optionId}},
+        [this, postId, generation](ApiResult result) {
+        if (generation != m_generation) return;
+        m_pollVotes.remove(postId); emit pollBusyChanged(postId, false);
+        const auto post = result.data();
+        if (!result.ok() || post.value("id").toString() != postId || !post.value("poll").isObject()) {
+            emit pollFailed(postId, result.error.isEmpty() ? tr("投票結果を確認できませんでした。同じ選択肢で再試行するか、ポストを再読み込みしてください") : result.error); return;
+        }
+        m_pollKeys.remove(postId); emit pollUpdated(postId, post.value("poll").toObject());
+    }, key);
+}
+
+void NorthApi::refreshPoll(const QString &postId)
+{
+    if (!allowsScope("posts.read") || postId.isEmpty() || m_pollReads.contains(postId)) return;
+    m_pollReads.insert(postId); const auto generation = m_generation;
+    request(this, "GET", "/2/tweets/" + QString::fromLatin1(QUrl::toPercentEncoding(postId)), {}, {}, [this, postId, generation](ApiResult result) {
+        if (generation != m_generation) return;
+        m_pollReads.remove(postId);
+        if (result.ok() && result.data().value("id").toString() == postId && result.data().value("poll").isObject())
+            emit pollUpdated(postId, result.data().value("poll").toObject());
+        else emit pollFailed(postId, tr("投票結果を更新できませんでした。ポストを再読み込みしてください"));
+    });
+}
+
 void NorthApi::logout()
 {
     ++m_generation;
@@ -31,6 +66,7 @@ void NorthApi::logout()
     m_accessToken.clear();
     m_refreshToken.clear();
     m_scopes.clear();
+    m_pollVotes.clear(); m_pollReads.clear(); m_pollKeys.clear();
     m_scopesKnown = false;
     m_isOAuth = false;
     m_accessExpiry = {};
@@ -102,7 +138,7 @@ void NorthApi::startDeviceLogin(const QString &clientId, bool writeAccess, bool 
     if (m_clientId.isEmpty()) { emit loginFailed(tr("Client IDを入力してください。")); return; }
     const auto deviceGeneration = m_deviceGeneration;
     QString scopes = "users.read posts.read notifications.read";
-    if (writeAccess) scopes += " posts.write reactions.write notifications.write";
+    if (writeAccess) scopes += " posts.write reactions.write notifications.write polls.vote follows.write";
     if (messages) scopes += " dm.read dm.write dm.conversations.write";
     send(this, "POST", "/oauth/device/code", {}, {{"client_id", m_clientId}, {"scope", scopes}},
          [this, deviceGeneration](ApiResult r) {
