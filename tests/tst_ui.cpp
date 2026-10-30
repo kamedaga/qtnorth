@@ -119,6 +119,35 @@ private slots:
         QCOMPARE(server.requests.size(), 0);
         capture(window, "login");
     }
+    void oauthStartsWithoutClientSetup_data() {
+        QTest::addColumn<QString>("previousClientId");
+        QTest::newRow("fresh-install") << QString{};
+        QTest::newRow("previous-client-setting") << QString{"previous-client"};
+    }
+    void oauthStartsWithoutClientSetup() {
+        QFETCH(QString, previousClientId);
+        const auto original = QSettings().value("oauth/clientId");
+        const auto restore = qScopeGuard([original] {
+            if (original.isValid()) QSettings().setValue("oauth/clientId", original);
+            else QSettings().remove("oauth/clientId");
+        });
+        QSettings().setValue("oauth/clientId", previousClientId);
+        Server server;
+        // Stop before browser authorization so this regression test stays local.
+        server.handler = [](Request) { return Response{400, {{"error", "access_denied"}}}; };
+        MemoryStore store;
+        MainWindow window(nullptr, server.base(), &store); window.show();
+        auto *methods = window.findChild<QTabWidget *>("loginMethods");
+        QTRY_VERIFY(methods->isEnabled());
+        auto *authorize = findButton(window, "ブラウザーでログイン"); QVERIFY(authorize);
+        QTest::mouseClick(authorize, Qt::LeftButton);
+        QTRY_COMPARE(server.requests.size(), 1);
+        QCOMPARE(server.requests.first().url.path(), "/oauth/device/code");
+        QCOMPARE(server.requests.first().body.value("client_id").toString(), "cmvv11g6c009lgkrd3i2xtgsv");
+        QVERIFY(!server.requests.first().headers.contains("authorization"));
+        QTRY_VERIFY(methods->isEnabled());
+        QCOMPARE(window.findChild<QStackedWidget *>("appPages")->currentWidget()->objectName(), "loginPage");
+    }
     void storedLoginAutomaticallyResumesAndLogoutErases() {
         Server server;
         server.handler = [](Request request) {

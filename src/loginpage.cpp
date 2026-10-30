@@ -9,10 +9,14 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QRegularExpression>
-#include <QSettings>
 #include <QTabWidget>
 #include <QToolButton>
 #include <QVBoxLayout>
+
+namespace {
+// Public client identifier registered for qtNorth; this is not a secret.
+constexpr auto oauthClientId = "cmvv11g6c009lgkrd3i2xtgsv";
+}
 
 LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
 {
@@ -63,9 +67,6 @@ LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
     auto *oauth = new QWidget;
     auto *oauthLayout = new QVBoxLayout(oauth);
     oauthLayout->setContentsMargins(0, 14, 0, 0); oauthLayout->setSpacing(12);
-    auto *client = new QLineEdit(QSettings().value("oauth/clientId").toString());
-    client->setPlaceholderText("Client ID");
-    client->setToolTip(tr("northの「設定 › 開発者向け」でアプリを登録"));
     auto *write = new QCheckBox(tr("書き込みを許可")); write->setChecked(true);
     write->setToolTip(tr("投稿・リアクション・通知を既読にする操作"));
     m_messages = new QCheckBox(tr("メッセージを許可"));
@@ -73,11 +74,9 @@ LoginPage::LoginPage(QWidget *parent) : QWidget(parent)
     m_messages->setToolTip(tr("参加している会話の読み取り、会話作成、送信"));
     auto *authorize = new QPushButton(tr("ブラウザーでログイン"));
     authorize->setObjectName("primary");
-    oauthLayout->addWidget(client); oauthLayout->addWidget(write); oauthLayout->addWidget(m_messages); oauthLayout->addWidget(authorize);
-    connect(authorize, &QPushButton::clicked, this, [this, client, write] {
-        if (client->text().trimmed().isEmpty()) { setMessage(tr("Client IDを入力してください")); return; }
-        QSettings().setValue("oauth/clientId", client->text().trimmed());
-        emit deviceLoginRequested(client->text().trimmed(), write->isChecked(), m_messages->isChecked());
+    oauthLayout->addWidget(write); oauthLayout->addWidget(m_messages); oauthLayout->addWidget(authorize);
+    connect(authorize, &QPushButton::clicked, this, [this, write] {
+        emit deviceLoginRequested(QString::fromLatin1(oauthClientId), write->isChecked(), m_messages->isChecked());
     });
     m_tabs->addTab(oauth, "OAuth");
     auto *personal = new QWidget;
